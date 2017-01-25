@@ -1,0 +1,6 @@
+{
+  "extends": "eslint-config-squarespace/vanilla",
+  "env": {
+    "browser": true
+  }
+}
