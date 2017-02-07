@@ -622,43 +622,29 @@ class VideoBackground {
   _findPlayerDimensions() {
     let w;
     let h;
-    if (this.videoSource === 'youtube') {
+    const player = this.player;
+    if (this.videoSource === 'youtube' && player) {
+      for (let p in player) {
+        let prop = player[p];
+        if (typeof prop === 'object' && prop.width && prop.height) {
+          w = prop.width;
+          h = prop.height;
+          break;
+        }
+      }
+    } else if (this.videoSource === 'vimeo' && player) {
+      if (player.dimensions) {
+        w = player.dimensions.width;
+        h = player.dimensions.height;
+      } else if (player.iframe) {
+        w = player.iframe.clientWidth;
+        h = player.iframe.clientHeight;
+      }
+    }
+    if (!w || !h) {
       w = this.container.clientWidth;
       h = this.container.clientHeight;
-      let hasDimensions = false;
-      let playerObjs = [];
-      const player = this.player;
-      for (let o in player) {
-        if (typeof player[o] === 'object') {
-          playerObjs.push(player[o]);
-        }
-      }
-      playerObjs.forEach(function(obj) {
-        for (let p in obj) {
-          if (hasDimensions) {
-            break;
-          }
-          try {
-            if (typeof obj[p] === 'object' && !!obj[p].host) {
-              if (obj[p].width && obj[p].height) {
-                w = obj[p].width;
-                h = obj[p].height;
-                hasDimensions = true;
-              }
-            }
-          } catch (err) {
-            // console.error(err);
-          }
-        }
-      });
-    } else if (this.videoSource === 'vimeo') {
-      if (!this.player.dimensions) {
-        w = this.player.iframe.clientWidth;
-        h = this.player.iframe.clientHeight;
-      } else {
-        w = this.player.dimensions.width;
-        h = this.player.dimensions.height;
-      }
+      console.warn('Video player dimensions not found.');
     }
     return {
       'width': w,
