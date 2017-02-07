@@ -620,28 +620,31 @@ class VideoBackground {
    * container width and height, in case YouTube changes the internals unexpectedly.
    */
   _findPlayerDimensions() {
-    let w = this.container.clientWidth;
-    let h = this.container.clientHeight;
-    if (this.videoSource === 'youtube') {
-      const player = this.player;
-      for (let o in player) {
-        let key = player[o];
-        if (typeof key === 'object') {
-          if (key.width && key.height) {
-            w = key.width;
-            h = key.height;
-            break;
-          }
+    let w;
+    let h;
+    const player = this.player;
+    if (this.videoSource === 'youtube' && player) {
+      for (let p in player) {
+        let prop = player[p];
+        if (typeof prop === 'object' && prop.width && prop.height) {
+          w = prop.width;
+          h = prop.height;
+          break;
         }
       }
-    } else if (this.videoSource === 'vimeo' && this.player) {
-      if (this.player.dimensions) {
-        w = this.player.dimensions.width;
-        h = this.player.dimensions.height;
-      } else if (this.player.iframe) {
-        w = this.player.iframe.clientWidth;
-        h = this.player.iframe.clientHeight;
+    } else if (this.videoSource === 'vimeo' && player) {
+      if (player.dimensions) {
+        w = player.dimensions.width;
+        h = player.dimensions.height;
+      } else if (player.iframe) {
+        w = player.iframe.clientWidth;
+        h = player.iframe.clientHeight;
       }
+    }
+    if (!w || !h) {
+      w = this.container.clientWidth;
+      h = this.container.clientHeight;
+      console.warn('Video player dimensions not found.');
     }
     return {
       'width': w,
