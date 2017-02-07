@@ -620,44 +620,27 @@ class VideoBackground {
    * container width and height, in case YouTube changes the internals unexpectedly.
    */
   _findPlayerDimensions() {
-    let w;
-    let h;
+    let w = this.container.clientWidth;
+    let h = this.container.clientHeight;
     if (this.videoSource === 'youtube') {
-      w = this.container.clientWidth;
-      h = this.container.clientHeight;
-      let hasDimensions = false;
-      let playerObjs = [];
       const player = this.player;
       for (let o in player) {
-        if (typeof player[o] === 'object') {
-          playerObjs.push(player[o]);
-        }
-      }
-      playerObjs.forEach(function(obj) {
-        for (let p in obj) {
-          if (hasDimensions) {
+        let key = player[o];
+        if (typeof key === 'object') {
+          if (key.width && key.height) {
+            w = key.width;
+            h = key.height;
             break;
           }
-          try {
-            if (typeof obj[p] === 'object' && !!obj[p].host) {
-              if (obj[p].width && obj[p].height) {
-                w = obj[p].width;
-                h = obj[p].height;
-                hasDimensions = true;
-              }
-            }
-          } catch (err) {
-            // console.error(err);
-          }
         }
-      });
-    } else if (this.videoSource === 'vimeo') {
-      if (!this.player.dimensions) {
-        w = this.player.iframe.clientWidth;
-        h = this.player.iframe.clientHeight;
-      } else {
+      }
+    } else if (this.videoSource === 'vimeo' && this.player) {
+      if (this.player.dimensions) {
         w = this.player.dimensions.width;
         h = this.player.dimensions.height;
+      } else if (this.player.iframe) {
+        w = this.player.iframe.clientWidth;
+        h = this.player.iframe.clientHeight;
       }
     }
     return {
