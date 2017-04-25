@@ -460,6 +460,7 @@ class VideoBackground {
 
       case 'playProgress':
       case 'timeupdate':
+        postMessageManager('setVolume', '0');
         if (player.playTimeout !== null) {
           onPlaying();
         }
