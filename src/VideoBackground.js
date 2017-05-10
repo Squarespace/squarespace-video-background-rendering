@@ -164,11 +164,10 @@ class VideoBackground {
   setFallbackImage() {
     if (this.useCustomFallbackImage) {
       const customFallbackImage = this.container.querySelector('.custom-fallback-image');
-      const tempImage = document.createElement('img');
-      tempImage.src = customFallbackImage.src;
-      tempImage.addEventListener('load', () => {
+      customFallbackImage.addEventListener('load', () => {
         customFallbackImage.classList.add('loaded');
       });
+      window.ImageLoader.load(customFallbackImage, { load: true });
     }
   }
 
