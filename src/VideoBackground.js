@@ -166,7 +166,6 @@ class VideoBackground {
       const customFallbackImage = this.container.querySelector('.custom-fallback-image');
       customFallbackImage.addEventListener('load', () => {
         customFallbackImage.classList.add('loaded');
-        customFallbackImage.classList.add('test');
       });
       window.ImageLoader.load(customFallbackImage, { load: true });
     }
