@@ -28,6 +28,7 @@
     "url-parse": "^1.1.1",
     "xhr": "^2.2.1"
   },
+  "browser": "dist/index-polyfilled.js",
   "main": "dist/index-polyfilled.js",
   "module": "src/index.js"
 }
