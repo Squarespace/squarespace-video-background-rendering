@@ -42,10 +42,12 @@ const VideoAutoplayTest = () => {
       return;
     }
 
-    // Create video element to test autoplay
-    var elem = document.createElement('video');
-    elem.autoplay = true;
-    elem.muted = true;
+    const elem = document.createElement('video');
+    elem.setAttribute('autoplay', 'true');
+    elem.setAttribute('muted', 'true');
+    elem.setAttribute('data-is-playing', 'false');
+    elem.style.display = 'none';
+    document.body.appendChild(elem);
 
     try {
       if (elem.canPlayType('video/ogg; codecs="theora"').match(/^(probably)|(maybe)/)) {
@@ -62,23 +64,21 @@ const VideoAutoplayTest = () => {
     }
 
     elem.load();
-    elem.style.display = 'none';
-    elem.playing = false;
+
+    elem.addEventListener('play', () => {
+      elem.setAttribute('data-is-playing', 'true');
+
+      elem.addEventListener('canplay', () => {
+        if (elem.getAttribute('data-is-playing') === 'true') {
+          resolve('autoplay supported');
+          return true;
+        }
+        reject('no autoplay: browser does not support autoplay');
+        return false;
+      });
+    });
+
     elem.play();
-    // Check if video plays
-    elem.onplay = function() {
-      this.playing = true;
-    };
-    // Video has loaded, check autoplay support
-    elem.oncanplay = function() {
-      if (elem.playing) {
-        resolve('autoplay supported');
-        return true;
-      }
-      reject('no autoplay: browser does not support autoplay');
-      return false;
-    };
-    document.body.appendChild(elem);
   });
 };
 
