@@ -30,8 +30,6 @@ THE SOFTWARE.
 
 const DEBUG = false;
 
-const RETRIES = 5;
-const WAITTIME = 200; //ms
 const { OggVideo, Mp4Video } = require('../constants/videoTestBlobs');
 
 const VideoAutoplayTest = () => {
@@ -45,38 +43,11 @@ const VideoAutoplayTest = () => {
     }
 
     const elem = document.createElement('video');
-    const elemStyle = elem.style;
-
-    let currentTry = 0;
-    let timeout;
-
-    const testAutoplay = (evt) => {
-      currentTry++;
-      clearTimeout(timeout);
-
-      const canAutoPlay = evt && evt.type === 'playing' || elem.currentTime !== 0;
-
-      if (!canAutoPlay && currentTry < RETRIES) {
-        timeout = setTimeout(testAutoplay, WAITTIME);
-        return;
-      }
-
-      elem.removeEventListener('playing', testAutoplay, false);
-      if (canAutoPlay) {
-        resolve(canAutoPlay);
-      } else {
-        reject('no autoplay: browser does not support autoplay');
-      }
-      elem.parentNode.removeChild(elem);
-    };
-
-    // skip the test if the autoplay isn't supported on `video` elements
-    if (!('autoplay' in elem)) {
-      reject('no autoplay: browser does not support autoplay attribute');
-      return;
-    }
-
-    elemStyle.cssText = 'position: absolute; height: 0; width: 0; overflow: hidden; visibility: hidden; z-index: -100';
+    elem.setAttribute('autoplay', 'true');
+    elem.setAttribute('muted', 'true');
+    elem.setAttribute('data-is-playing', 'false');
+    elem.style.display = 'none';
+    document.body.appendChild(elem);
 
     try {
       if (elem.canPlayType('video/ogg; codecs="theora"').match(/^(probably)|(maybe)/)) {
@@ -92,16 +63,22 @@ const VideoAutoplayTest = () => {
       return;
     }
 
-    elem.setAttribute('autoplay', '');
-    elem.setAttribute('muted', 'true');
-    elem.style.cssText = 'display:none';
-    document.body.appendChild(elem);
-    // wait for the next tick to add the listener, otherwise the element may
-    // not have time to play in high load situations (e.g. the test suite)
-    setTimeout(() => {
-      elem.addEventListener('playing', testAutoplay, false);
-      timeout = setTimeout(testAutoplay, WAITTIME);
-    }, 0);
+    elem.load();
+
+    elem.addEventListener('play', () => {
+      elem.setAttribute('data-is-playing', 'true');
+
+      elem.addEventListener('canplay', () => {
+        if (elem.getAttribute('data-is-playing') === 'true') {
+          resolve('autoplay supported');
+          return true;
+        }
+        reject('no autoplay: browser does not support autoplay');
+        return false;
+      });
+    });
+
+    elem.play();
   });
 };
 
