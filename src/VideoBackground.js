@@ -259,8 +259,7 @@ class VideoBackground {
             this.player.getIframe().classList.add('ready');
 
           }
-        },
-        context: this
+        }
       });
       playerPromise.then((player) => {
         this.player = player;
