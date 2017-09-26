@@ -1,12 +1,6 @@
-const doLoop = (player, startTime) => {
-  if ((player.getCurrentTime() + 0.1) >= player.getDuration()) {
-    player.pauseVideo();
-    player.seekTo(startTime);
-    player.playVideo();
-  }
-  requestAnimationFrame(doLoop.bind(null, player, startTime));
-};
-
+/**
+ * Set up the YouTube script include if it's not present
+ */
 const initializeYouTubeAPI = (win) => {
   return new Promise((resolve, reject) => {
     if (win.document.documentElement.querySelector('script[src*="www.youtube.com/iframe_api"].loaded')) {
@@ -22,6 +16,9 @@ const initializeYouTubeAPI = (win) => {
       evt.currentTarget.classList.add('loaded');
       resolve('created and loaded');
     }, true);
+    tag.addEventListener('error', (evt) => {
+      reject('Failed to load YouTube script: ', evt);
+    });
   });
 };
 
@@ -44,12 +41,21 @@ const onYouTubePlayerStateChange = (event, startTime, win, playbackSpeed = 1) =>
   const player = event.target;
   const duration = (player.getDuration() - startTime) / playbackSpeed;
 
+  const doLoop = () => {
+    if ((player.getCurrentTime() + 0.1) >= player.getDuration()) {
+      player.pauseVideo();
+      player.seekTo(startTime);
+      player.playVideo();
+    }
+    requestAnimationFrame(doLoop);
+  };
+
   if (event.data === win.YT.PlayerState.BUFFERING &&
      (player.getVideoLoadedFraction() !== 1) &&
      (player.getCurrentTime() === 0 || player.getCurrentTime() > duration - -0.1)) {
     return 'buffering';
   } else if (event.data === win.YT.PlayerState.PLAYING) {
-    requestAnimationFrame(doLoop.bind(null, player, startTime));
+    requestAnimationFrame(doLoop);
     return 'playing';
   } else if (event.data === win.YT.PlayerState.ENDED) {
     player.playVideo();

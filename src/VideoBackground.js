@@ -193,6 +193,11 @@ class VideoBackground {
         this.logger(message);
         this.player.ready = false;
         this.setVideoPlayer();
+      }).catch((message) => {
+        this.canAutoPlay = false;
+        this.container.classList.add('mobile');
+        document.body.classList.add('ready');
+        this.logger(message);
       });
     }
 
