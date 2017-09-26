@@ -2,5 +2,8 @@
   "extends": "eslint-config-squarespace/vanilla",
   "env": {
     "browser": true
+  },
+  "rules": {
+    "complexity": ["warn", 11]
   }
 }
