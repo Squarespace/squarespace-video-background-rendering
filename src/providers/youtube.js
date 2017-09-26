@@ -73,10 +73,6 @@ const initializeYouTubePlayer = (config) => {
     config.container.appendChild(playerElement);
   }
 
-  const isAPILoaded = () => {
-    return config.win.YT.loaded === 1;
-  };
-
   const makePlayer = () => {
     return new config.win.YT.Player(playerElement, {
       height: '315',
@@ -109,18 +105,15 @@ const initializeYouTubePlayer = (config) => {
   };
 
   return new Promise((resolve, reject) => {
+    const checkAPILoaded = () => {
+      if (config.win.YT.loaded === 1) {
+        resolve(makePlayer());
+      } else {
+        setTimeout(checkAPILoaded, 100);
+      }
+    };
 
-    if (isAPILoaded()) {
-      resolve(makePlayer());
-    } else {
-      let tx;
-      tx = setInterval(() => {
-        if (isAPILoaded()) {
-          clearInterval(tx);
-          resolve(makePlayer());
-        }
-      }, 50);
-    }
+    checkAPILoaded();
   });
 };
 
