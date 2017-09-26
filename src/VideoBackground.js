@@ -12,7 +12,6 @@ const DEFAULT_PROPERTY_VALUES = {
   'container': '.background-wrapper',
   'url': 'https://youtu.be/xkEmYQvJ_68',
   'fitMode': 'fill',
-  'maxLoops': '',
   'scaleFactor': 1,
   'playbackSpeed': 1,
   'filter': 1,
@@ -131,7 +130,6 @@ class VideoBackground {
     this.filterStrength = props.filterStrength;
     this.useCustomFallbackImage = props.useCustomFallbackImage;
     this.fitMode = props.fitMode;
-    this.maxLoops = parseInt(props.maxLoops, 10) || null;
     this.scaleFactor = props.scaleFactor;
     this.playbackSpeed = parseFloat(props.playbackSpeed) === 0.0 ? 1 : parseFloat(props.playbackSpeed);
     this.timeCode = {
@@ -187,12 +185,23 @@ class VideoBackground {
    * Determine which API to use
    */
   callVideoAPI() {
-    if (this.videoSource === 'youtube') {
-      initializeYouTubeAPI(this);
+    if (this.videoSource === 'youtube' && this.canAutoPlay) {
+      this.player.ready = false;
+
+      const apiPromise = initializeYouTubeAPI(this.windowContext);
+      apiPromise.then((message) => {
+        this.logger(message);
+        this.player.ready = false;
+        this.setVideoPlayer();
+      });
     }
 
-    if (this.videoSource === 'vimeo') {
-      initializeVimeoAPI(this);
+    if (this.videoSource === 'vimeo' && this.canAutoPlay) {
+      const apiPromise = initializeVimeoAPI();
+      apiPromise.then((message) => {
+        this.logger(message);
+        this.setVideoPlayer();
+      });
     }
   }
 
@@ -211,7 +220,46 @@ class VideoBackground {
     }
 
     if (this.videoSource === 'youtube') {
-      initializeYouTubePlayer(this);
+      const playerPromise = initializeYouTubePlayer({
+        container: this.container,
+        win: this.windowContext,
+        videoId: this.videoId,
+        startTime: this.timeCode.start,
+        speed: this.playbackSpeed,
+        readyCallback: (player) => {
+          // Could this be reused for Vimeo?
+          this.player.iframe = player.getIframe();
+          this.player.iframe.classList.add('background-video');
+          this.syncPlayer();
+          const readyEvent = new CustomEvent('ready');
+          this.container.dispatchEvent(readyEvent);
+          document.body.classList.add('ready');
+        },
+        stateChangeCallback: (state) => {
+          // Could this be reused for Vimeo?
+          if (state === 'buffering') {
+            this.logger('BUFFERING');
+            this.autoPlayTestTimeout();
+          }
+          if (state === 'playing') {
+            if (this.player.playTimeout !== null) {
+              clearTimeout(this.player.playTimeout);
+              this.player.playTimeout = null;
+            }
+            if (!this.canAutoPlay) {
+              this.canAutoPlay = true;
+              this.container.classList.remove('mobile');
+            }
+            this.logger('PLAYING');
+            this.player.getIframe().classList.add('ready');
+
+          }
+        },
+        context: this
+      });
+      playerPromise.then((player) => {
+        this.player = player;
+      });
     } else if (this.videoSource === 'vimeo') {
       initializeVimeoPlayer(this);
     }

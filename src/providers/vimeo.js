@@ -1,15 +1,13 @@
 /**
  * Call the Vimeo API per their guidelines.
  */
-const initializeVimeoAPI = (context) => {
+const initializeVimeoAPI = () => {
   // No external API call is necessary; preserved for parity with YouTube and
   // potential additional integrations.
-  if (!context.canAutoPlay) {
-    return;
-  }
-
-  context.setVideoPlayer();
-}
+  return new Promise((resolve, reject) => {
+    resolve('no api needed');
+  });
+};
 
 /**
  * Initialize the player and bind player events with a postMessage handler.
@@ -150,9 +148,9 @@ const initializeVimeoPlayer = (context) => {
       player.iframe.parentElement.removeChild(player.iframe);
     }
   };
-}
+};
 
 export {
   initializeVimeoAPI,
   initializeVimeoPlayer
-}
+};

@@ -1,100 +1,57 @@
-let awaitingLoopRequestedAt = null;
-
-const initializeYouTubeAPI = (context) => {
-  if (!context.canAutoPlay) {
-    return;
+const doLoop = (player, startTime) => {
+  if ((player.getCurrentTime() + 0.1) >= player.getDuration()) {
+    player.pauseVideo();
+    player.seekTo(startTime);
+    player.playVideo();
   }
+  requestAnimationFrame(doLoop.bind(null, player, startTime));
+};
 
-  const doc = context.windowContext.document.documentElement;
-  if (doc.querySelector('script[src*="www.youtube.com/iframe_api"].loaded')) {
-    context.setVideoPlayer();
-    return;
-  }
+const initializeYouTubeAPI = (win) => {
+  return new Promise((resolve, reject) => {
+    if (win.document.documentElement.querySelector('script[src*="www.youtube.com/iframe_api"].loaded')) {
+      resolve('already loaded');
+      return;
+    }
 
-  context.player.ready = false;
-  const tag = context.windowContext.document.createElement('script');
-  tag.src = 'https://www.youtube.com/iframe_api';
-  const firstScriptTag = context.windowContext.document.getElementsByTagName('script')[0];
-  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-  tag.addEventListener('load', (evt) => {
-    evt.currentTarget.classList.add('loaded');
-    context.setVideoPlayer();
-  }, true);
+    const tag = win.document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = win.document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    tag.addEventListener('load', (evt) => {
+      evt.currentTarget.classList.add('loaded');
+      resolve('created and loaded');
+    }, true);
+  });
 };
 
 /**
  * YouTube event handler. Add the proper class to the player element, and set
  * player properties. All player methods via YouTube API.
  */
-const onYouTubePlayerReady = (event, context) => {
-  const player = context.player;
-  player.iframe = player.getIframe();
-  player.iframe.classList.add('background-video');
-  context.syncPlayer();
+const onYouTubePlayerReady = (event, startTime) => {
+  const player = event.target;
   player.mute();
-  const readyEvent = new CustomEvent('ready');
-  context.container.dispatchEvent(readyEvent);
-  document.body.classList.add('ready');
   player.ready = true;
-  if (!context.canAutoPlay) {
-    return;
-  }
-  if (context.timeCode.start >= player.getDuration()) {
-    context.timeCode.start = 0;
-  }
-  player.seekTo(context.timeCode.start);
+  player.seekTo(startTime < player.getDuration() ? startTime : 0);
   player.playVideo();
-  context.logger('playing');
 };
 
 /**
  * YouTube event handler. Determine whether or not to loop the video.
  */
-const onYouTubePlayerStateChange = (event, context) => {
-  const player = context.player;
-  const playerIframe = player.getIframe();
-  const duration = (player.getDuration() - context.timeCode.start) / context.playbackSpeed;
+const onYouTubePlayerStateChange = (event, startTime, win, playbackSpeed = 1) => {
+  const player = event.target;
+  const duration = (player.getDuration() - startTime) / playbackSpeed;
 
-  const doLoop = () => {
-    if (awaitingLoopRequestedAt === null) {
-      if ((player.getCurrentTime() + 0.1) >= player.getDuration()) {
-        if (context.maxLoops) {
-          context.currentLoop++;
-          if (context.currentLoop > context.maxLoops) {
-            player.pauseVideo();
-            context.currentLoop = 0;
-            return;
-          }
-        }
-        awaitingLoopRequestedAt = player.getCurrentTime();
-        player.pauseVideo();
-        player.seekTo(context.timeCode.start);
-      }
-    } else if (player.getCurrentTime() < awaitingLoopRequestedAt) {
-      awaitingLoopRequestedAt = null;
-      player.playVideo();
-    }
-    requestAnimationFrame(doLoop.bind(context));
-  };
-
-  if (event.data === context.windowContext.YT.PlayerState.BUFFERING &&
+  if (event.data === win.YT.PlayerState.BUFFERING &&
      (player.getVideoLoadedFraction() !== 1) &&
      (player.getCurrentTime() === 0 || player.getCurrentTime() > duration - -0.1)) {
-    context.logger('BUFFERING');
-    context.autoPlayTestTimeout();
-  } else if (event.data === context.windowContext.YT.PlayerState.PLAYING) {
-    if (context.player.playTimeout !== null) {
-      clearTimeout(context.player.playTimeout);
-      context.player.playTimeout = null;
-    }
-    if (!context.canAutoPlay) {
-      context.canAutoPlay = true;
-      context.container.classList.remove('mobile');
-    }
-    context.logger('PLAYING');
-    playerIframe.classList.add('ready');
-    requestAnimationFrame(doLoop.bind(context));
-  } else if (event.data === context.windowContext.YT.PlayerState.ENDED) {
+    return 'buffering';
+  } else if (event.data === win.YT.PlayerState.PLAYING) {
+    requestAnimationFrame(doLoop.bind(null, player, startTime));
+    return 'playing';
+  } else if (event.data === win.YT.PlayerState.ENDED) {
     player.playVideo();
   }
 };
@@ -102,43 +59,61 @@ const onYouTubePlayerStateChange = (event, context) => {
 /**
  * Initialize the player and bind player events.
  */
-const initializeYouTubePlayer = (context) => {
-  // Poll until the API is ready.
-  if (context.windowContext.YT.loaded !== 1) {
-    setTimeout(context.setVideoPlayer.bind(context), 100);
-    return false;
-  }
-
-  let playerElement = context.container.querySelector('#player');
+const initializeYouTubePlayer = (config) => {
+  let playerElement = config.container.querySelector('#player');
   if (!playerElement) {
     playerElement = document.createElement('div');
     playerElement.id = 'player';
-    context.container.appendChild(playerElement);
+    config.container.appendChild(playerElement);
   }
-  context.player = new context.windowContext.YT.Player(playerElement, {
-    height: '315',
-    width: '560',
-    videoId: context.videoId,
-    playerVars: {
-      'autohide': 1,
-      'autoplay': 0,
-      'controls': 0,
-      'enablejsapi': 1,
-      'iv_load_policy': 3,
-      'loop': 0,
-      'modestbranding': 1,
-      'playsinline': 1,
-      'rel': 0,
-      'showinfo': 0,
-      'wmode': 'opaque'
-    },
-    events: {
-      onReady: (event) => {
-        onYouTubePlayerReady(event, context);
+
+  const isAPILoaded = () => {
+    return config.win.YT.loaded === 1;
+  };
+
+  const makePlayer = () => {
+    return new config.win.YT.Player(playerElement, {
+      height: '315',
+      width: '560',
+      videoId: config.videoId,
+      playerVars: {
+        'autohide': 1,
+        'autoplay': 0,
+        'controls': 0,
+        'enablejsapi': 1,
+        'iv_load_policy': 3,
+        'loop': 0,
+        'modestbranding': 1,
+        'playsinline': 1,
+        'rel': 0,
+        'showinfo': 0,
+        'wmode': 'opaque'
       },
-      onStateChange: (event) => {
-        onYouTubePlayerStateChange(event, context);
+      events: {
+        onReady: function(event) {
+          onYouTubePlayerReady(event, config.startTime);
+          config.readyCallback(event.target);
+        },
+        onStateChange: function(event) {
+          const state = onYouTubePlayerStateChange(event, config.startTime, config.win, config.playbackSpeed);
+          config.stateChangeCallback(state);
+        }
       }
+    });
+  };
+
+  return new Promise((resolve, reject) => {
+
+    if (isAPILoaded()) {
+      resolve(makePlayer());
+    } else {
+      let tx;
+      tx = setInterval(() => {
+        if (isAPILoaded()) {
+          clearInterval(tx);
+          resolve(makePlayer());
+        }
+      }, 50);
     }
   });
 };
