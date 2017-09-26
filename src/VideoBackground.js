@@ -1,6 +1,7 @@
 import parseUrl from 'url-parse';
 import testAutoPlay from './utils/videoAutoplayTest';
-import { initializeYouTubeAPI, initializeYouTubePlayer } from 'youtube';
+import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo';
+import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube';
 
 // Adds instance to the window for debugging
 const DEBUG = true;
@@ -187,25 +188,12 @@ class VideoBackground {
    */
   callVideoAPI() {
     if (this.videoSource === 'youtube') {
-      initializeYouTubeAPI();
+      initializeYouTubeAPI(this);
     }
 
     if (this.videoSource === 'vimeo') {
-      this.initializeVimeoAPI();
+      initializeVimeoAPI(this);
     }
-  }
-
-  /**
-   * Call the Vimeo API per their guidelines.
-   */
-  initializeVimeoAPI() {
-    // No external API call is necessary; preserved for parity with YouTube and
-    // potential additional integrations.
-    if (!this.canAutoPlay) {
-      return;
-    }
-
-    this.setVideoPlayer();
   }
 
   /**
@@ -223,155 +211,10 @@ class VideoBackground {
     }
 
     if (this.videoSource === 'youtube') {
-      initializeYouTubePlayer();
+      initializeYouTubePlayer(this);
     } else if (this.videoSource === 'vimeo') {
-      this.initializeVimeoPlayer();
+      initializeVimeoPlayer(this);
     }
-  }
-
-  /**
-   * Initialize the player and bind player events with a postMessage handler.
-   */
-  initializeVimeoPlayer() {
-    const playerIframe = this.windowContext.document.createElement('iframe');
-    playerIframe.id = 'vimeoplayer';
-    playerIframe.classList.add('background-video');
-    const playerConfig = '&background=1';
-    playerIframe.src = '//player.vimeo.com/video/' + this.videoId + '?api=1' + playerConfig;
-    this.container.appendChild(playerIframe);
-    this.player.iframe = playerIframe;
-
-    /**
-     * Creates cross frame postMessage handlers, gets proper dimensions of player,
-     * and sets ready state for the player and container.
-     *
-     */
-    const player = this.player;
-    let playerOrigin = '*';
-
-    const postMessageManager = (action, value) => {
-      const data = {
-        method: action
-      };
-
-      if (value) {
-        data.value = value;
-      }
-
-      const message = JSON.stringify(data);
-      this.windowContext.eval('(function(ctx){ ctx.player.iframe.contentWindow.postMessage(' +
-        message + ', ' + JSON.stringify(playerOrigin) + '); })')(this);
-    };
-    player.postMessageManager = postMessageManager;
-
-    const syncAndStartPlayback = () => {
-      if (!player.dimensions.width || !player.dimensions.height || !player.duration) {
-        return;
-      }
-      this.syncPlayer();
-
-      const readyEvent = new CustomEvent('ready');
-      this.container.dispatchEvent(readyEvent);
-      document.body.classList.add('ready');
-
-      // Only required for Vimeo Basic videos, or video URLs with a start time hash.
-      // Plus and Pro utilize `background=1` URL parameter.
-      // See https://vimeo.com/forums/topic:278001
-      postMessageManager('setVolume', '0');
-      postMessageManager('setLoop', 'true');
-      postMessageManager('seekTo', this.timeCode.start);
-      postMessageManager('play');
-      postMessageManager('addEventListener', 'playProgress');
-    };
-
-    const onReady = () => {
-      player.dimensions = {};
-      postMessageManager('getDuration');
-      postMessageManager('getVideoHeight');
-      postMessageManager('getVideoWidth');
-    };
-
-    const onPlaying = () => {
-      clearTimeout(player.playTimeout);
-      postMessageManager('getVideoHeight');
-      postMessageManager('getVideoWidth');
-      player.playTimeout = null;
-      player.ready = true;
-      player.iframe.classList.add('ready');
-
-      if (!this.canAutoPlay) {
-        this.canAutoPlay = true;
-        this.container.classList.remove('mobile');
-      }
-    };
-
-    const onMessageReceived = (event) => {
-      if (!(/^https?:\/\/player.vimeo.com/).test(event.origin)) {
-        return false;
-      }
-
-      playerOrigin = event.origin;
-
-      let data = event.data;
-      if (typeof data === 'string') {
-        data = JSON.parse(data);
-      }
-      this.logger(data);
-
-      switch (data.event) {
-      case 'ready':
-        onReady();
-        break;
-
-      case 'playProgress':
-      case 'timeupdate':
-        postMessageManager('setVolume', '0');
-        if (player.playTimeout !== null) {
-          onPlaying();
-        }
-        if (data.data.percent >= 0.98 && this.timeCode.start > 0) {
-          postMessageManager('seekTo', this.timeCode.start);
-        }
-        break;
-      }
-
-      switch (data.method) {
-      case 'getVideoHeight':
-        player.dimensions.height = data.value;
-        syncAndStartPlayback();
-        break;
-      case 'getVideoWidth':
-        player.dimensions.width = data.value;
-        syncAndStartPlayback();
-        break;
-      case 'getDuration':
-        player.duration = data.value;
-        if (this.timeCode.start >= player.duration) {
-          this.timeCode.start = 0;
-        }
-        syncAndStartPlayback();
-        break;
-      }
-    };
-
-    const messageHandler = e => {
-      onMessageReceived(e);
-    };
-
-    this.windowContext.addEventListener('message', messageHandler, false);
-    this.autoPlayTestTimeout();
-
-    player.destroy = () => {
-      this.windowContext.removeEventListener('message', messageHandler);
-      // If the iframe node has already been removed from the DOM by the
-      // implementer, parentElement.removeChild will error out unless we do
-      // this check here first.
-      if (player.iframe.parentElement) {
-        player.iframe.parentElement.removeChild(player.iframe);
-      }
-    };
-
-
   }
 
   /**
