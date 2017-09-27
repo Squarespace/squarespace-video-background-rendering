@@ -3,7 +3,17 @@ import testAutoPlay from './utils/videoAutoplayTest';
 import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo';
 import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube';
 
-// Adds instance to the window for debugging
+const videoSourceModules = {
+  vimeo: {
+    api: initializeVimeoAPI,
+    player: initializeVimeoPlayer
+  },
+  youtube: {
+    api: initializeYouTubeAPI,
+    player: initializeYouTubePlayer
+  }
+};
+
 const DEBUG = true;
 // Allows logging in detail
 const DEBUG_VERBOSE = false;
@@ -185,10 +195,11 @@ class VideoBackground {
    * Determine which API to use
    */
   callVideoAPI() {
-    if (this.videoSource === 'youtube' && this.canAutoPlay) {
+    const initializeAPIFunction = videoSourceModules[this.videoSource].api;
+    if (this.canAutoPlay) {
       this.player.ready = false;
 
-      const apiPromise = initializeYouTubeAPI(this.windowContext);
+      const apiPromise = initializeAPIFunction(this.windowContext);
       apiPromise.then((message) => {
         this.logger(message);
         this.player.ready = false;
@@ -198,14 +209,6 @@ class VideoBackground {
         this.container.classList.add('mobile');
         document.body.classList.add('ready');
         this.logger(message);
-      });
-    }
-
-    if (this.videoSource === 'vimeo' && this.canAutoPlay) {
-      const apiPromise = initializeVimeoAPI();
-      apiPromise.then((message) => {
-        this.logger(message);
-        this.setVideoPlayer();
       });
     }
   }
@@ -223,13 +226,8 @@ class VideoBackground {
         // nothing to destroy
       }
     }
-    let initializePlayerFunction;
-    if (this.videoSource === 'youtube') {
-      initializePlayerFunction = initializeYouTubePlayer;
-    } else if (this.videoSource === 'vimeo') {
-      initializePlayerFunction = initializeVimeoPlayer;
-    }
 
+    const initializePlayerFunction = videoSourceModules[this.videoSource].player;
     const playerPromise = initializePlayerFunction({
       container: this.container,
       win: this.windowContext,
