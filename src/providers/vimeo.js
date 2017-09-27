@@ -43,7 +43,8 @@ const initializeVimeoPlayer = (config) => {
   config.container.appendChild(playerIframe);
 
   const player = {
-    iframe: playerIframe
+    iframe: playerIframe,
+    setPlaybackRate: () => {}
   };
 
   const syncAndStartPlayback = () => {

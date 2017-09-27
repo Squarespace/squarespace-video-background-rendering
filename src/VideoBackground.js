@@ -175,8 +175,7 @@ class VideoBackground {
   }
 
   /**
-   * A default fallback image element will be create from the YouTube API, unless the
-   * custom fallback image exists.
+   * Sets a custom fallback image
    */
   setFallbackImage() {
     if (this.useCustomFallbackImage && this.windowContext.ImageLoader) {
@@ -214,8 +213,7 @@ class VideoBackground {
   }
 
   /**
-   * If the source is YouTube, initialize the video player and register its callbacks.
-   * If the source is Vimeo, construct and append the player node and register handlers.
+   * Initialize the video player and register its callbacks
    */
   setVideoPlayer() {
     if (this.player.ready) {
@@ -479,9 +477,7 @@ class VideoBackground {
     */
   syncPlayer() {
     this.setDisplayEffects();
-    if (this.videoSource === 'youtube') {
-      this.setSpeed();
-    }
+    this.setSpeed();
     this.scaleVideo();
   }
 
