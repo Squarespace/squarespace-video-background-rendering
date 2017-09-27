@@ -125,6 +125,7 @@ class VideoBackground {
       console.error('Container ' + props.container + ' not found');
       return false;
     }
+    this.videoSource = this.getVideoSource(props.url);
     this.videoId = this.getVideoID(props.url);
     this.filter = props.filter;
     this.filterStrength = props.filterStrength;
@@ -142,26 +143,47 @@ class VideoBackground {
   }
 
   /**
-   * The ID is the only unique property needed to use in the YouTube and Vimeo APIs.
+   * Determine the video source from the URL via regex.
    */
-  getVideoID(value) {
+  getVideoSource(value) {
     if (!value) {
       value = DEFAULT_PROPERTY_VALUES.url;
     }
 
     let match = value.match(YOUTUBE_REGEX);
     if (match && match[2].length) {
-      this.videoSource = 'youtube';
-      return match[2];
+      return 'youtube';
     }
 
     match = value.match(VIMEO_REGEX);
     if (match && match[2].length) {
-      this.videoSource = 'vimeo';
+      return 'vimeo';
+    }
+
+    console.error(`Video source ${ value } does not match supported types`);
+    return null;
+  }
+
+  /**
+   * Get the video ID for use in the provider APIs.
+   */
+  getVideoID(value) {
+    if (!value) {
+      value = DEFAULT_PROPERTY_VALUES.url;
+    }
+
+    let match;
+    if (this.videoSource === 'youtube') {
+      match = value.match(YOUTUBE_REGEX);
+    } else if (this.videoSource === 'vimeo') {
+      match = value.match(VIMEO_REGEX);
+    }
+    if (match && match[2].length) {
       return match[2];
     }
 
-    throw new Error(`Video source ${ value } does not match supported types`);
+    console.error(`Video id at ${ value } is not valid`);
+    return null;
   }
 
   /**
@@ -184,10 +206,10 @@ class VideoBackground {
    * Load the API for the appropriate source, then
    */
   initializeVideoAPI() {
-    const sourceAPIFunction = videoSourceModules[this.videoSource].api;
-    if (this.canAutoPlay) {
+    if (this.canAutoPlay && this.videoSource && this.videoId) {
       this.player.ready = false;
 
+      const sourceAPIFunction = videoSourceModules[this.videoSource].api;
       const apiPromise = sourceAPIFunction(this.windowContext);
       apiPromise.then((message) => {
         this.logger(message);
@@ -199,6 +221,9 @@ class VideoBackground {
         document.body.classList.add('ready');
         this.logger(message);
       });
+    } else {
+      this.container.classList.add('mobile');
+      document.body.classList.add('ready');
     }
   }
 
