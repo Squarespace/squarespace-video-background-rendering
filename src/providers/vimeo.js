@@ -70,18 +70,6 @@ const initializeVimeoPlayer = (config) => {
     postMessageManager('getVideoWidth');
   };
 
-  const onPlaying = () => {
-    clearTimeout(player.playTimeout);
-    player.playTimeout = null;
-    player.ready = true;
-    player.iframe.classList.add('ready');
-
-    if (!config.context.canAutoPlay) {
-      config.context.canAutoPlay = true;
-      config.context.container.classList.remove('mobile');
-    }
-  };
-
   const onMessageReceived = (event) => {
     if (!(/^https?:\/\/player.vimeo.com/).test(event.origin)) {
       return false;
@@ -93,7 +81,6 @@ const initializeVimeoPlayer = (config) => {
     if (typeof data === 'string') {
       data = JSON.parse(data);
     }
-    config.context.logger(data);
 
     switch (data.event) {
     case 'ready':
@@ -102,10 +89,9 @@ const initializeVimeoPlayer = (config) => {
 
     case 'playProgress':
     case 'timeupdate':
+      config.stateChangeCallback('playing', data);
       postMessageManager('setVolume', '0');
-      if (player.playTimeout !== null) {
-        onPlaying();
-      }
+
       if (data.data.percent >= 0.98 && config.startTime > 0) {
         postMessageManager('seekTo', config.startTime);
       }

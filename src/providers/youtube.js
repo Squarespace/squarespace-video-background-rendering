@@ -28,6 +28,7 @@ const initializeYouTubeAPI = (win) => {
  */
 const onYouTubePlayerReady = (event, startTime) => {
   const player = event.target;
+  player.iframe = player.getIframe();
   player.mute();
   player.ready = true;
   player.seekTo(startTime < player.getDuration() ? startTime : 0);
@@ -98,7 +99,7 @@ const initializeYouTubePlayer = (config) => {
         },
         onStateChange: function(event) {
           const state = onYouTubePlayerStateChange(event, config.startTime, config.win, config.playbackSpeed);
-          config.stateChangeCallback(state);
+          config.stateChangeCallback(state, state);
         }
       }
     });

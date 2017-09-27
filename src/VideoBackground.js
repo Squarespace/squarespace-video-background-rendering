@@ -161,7 +161,7 @@ class VideoBackground {
       return match[2];
     }
 
-    return '';
+    throw new Error(`Video source ${ value } does not match supported types`);
   }
 
   /**
@@ -223,67 +223,51 @@ class VideoBackground {
         // nothing to destroy
       }
     }
-
+    let initializePlayerFunction;
     if (this.videoSource === 'youtube') {
-      const playerPromise = initializeYouTubePlayer({
-        container: this.container,
-        win: this.windowContext,
-        videoId: this.videoId,
-        startTime: this.timeCode.start,
-        speed: this.playbackSpeed,
-        readyCallback: (player) => {
-          // Could this be reused for Vimeo?
-          this.player.iframe = player.getIframe();
-          this.player.iframe.classList.add('background-video');
-          this.syncPlayer();
-          const readyEvent = new CustomEvent('ready');
-          this.container.dispatchEvent(readyEvent);
-          document.body.classList.add('ready');
-        },
-        stateChangeCallback: (state) => {
-          // Could this be reused for Vimeo?
-          if (state === 'buffering') {
-            this.logger('BUFFERING');
-            this.autoPlayTestTimeout();
-          }
-          if (state === 'playing') {
-            if (this.player.playTimeout !== null) {
-              clearTimeout(this.player.playTimeout);
-              this.player.playTimeout = null;
-            }
+      initializePlayerFunction = initializeYouTubePlayer;
+    } else if (this.videoSource === 'vimeo') {
+      initializePlayerFunction = initializeVimeoPlayer;
+    }
+
+    const playerPromise = initializePlayerFunction({
+      container: this.container,
+      win: this.windowContext,
+      videoId: this.videoId,
+      startTime: this.timeCode.start,
+      speed: this.playbackSpeed,
+      readyCallback: (player, data) => {
+        this.player.iframe.classList.add('background-video');
+        this.syncPlayer();
+        const readyEvent = new CustomEvent('ready');
+        this.container.dispatchEvent(readyEvent);
+        document.body.classList.add('ready');
+      },
+      stateChangeCallback: (state, data) => {
+        if (state === 'buffering') {
+          this.autoPlayTestTimeout();
+        } else if (state === 'playing') {
+          if (this.player.playTimeout !== null) {
+            clearTimeout(this.player.playTimeout);
+            this.player.playTimeout = null;
+            this.player.ready = true;
+            this.player.iframe.classList.add('ready');
+
             if (!this.canAutoPlay) {
               this.canAutoPlay = true;
               this.container.classList.remove('mobile');
             }
-            this.logger('PLAYING');
-            this.player.getIframe().classList.add('ready');
-
           }
         }
-      });
-      playerPromise.then((player) => {
-        this.player = player;
-      });
-    } else if (this.videoSource === 'vimeo') {
-      const playerPromise = initializeVimeoPlayer({
-        container: this.container,
-        win: this.windowContext,
-        videoId: this.videoId,
-        startTime: this.timeCode.start,
-        readyCallback: (player) => {
-          player.iframe.classList.add('background-video');
-          this.syncPlayer();
-          const readyEvent = new CustomEvent('ready');
-          this.container.dispatchEvent(readyEvent);
-          document.body.classList.add('ready');
-          this.autoPlayTestTimeout();
-        },
-        context: this
-      });
-      playerPromise.then((player) => {
-        this.player = player;
-      });
-    }
+        if (data) {
+          this.logger(data);
+        }
+      }
+    });
+
+    playerPromise.then((player) => {
+      this.player = player;
+    });
   }
 
   /**
