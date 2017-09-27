@@ -51,7 +51,7 @@ class VideoBackground {
     this.windowContext = windowContext;
     this.events = [];
 
-    this.initializeProperties(props);
+    this.setDefaultProperties(props);
     testAutoPlay().then((value) => {
       this.logger(value);
       this.canAutoPlay = true;
@@ -64,16 +64,11 @@ class VideoBackground {
       this.logger(value);
       this.setDisplayEffects();
       this.setFallbackImage();
-      this.callVideoAPI();
+      this.initializeVideoAPI();
       this.bindUI();
 
       if (DEBUG === true) {
         window.vdbg = this;
-        this.debugInterval = setInterval(() => {
-          if (this.player.getCurrentTime) {
-            this.logger((this.player.getCurrentTime() / this.player.getDuration()).toFixed(2));
-          }
-        }, 900);
       }
     });
   }
@@ -95,11 +90,6 @@ class VideoBackground {
     if (typeof this.timer === 'number') {
       clearTimeout(this.timer);
       this.timer = null;
-    }
-
-    if (typeof this.debugInterval === 'number') {
-      clearInterval(this.debugInterval);
-      this.debugInterval = null;
     }
   }
 
@@ -125,7 +115,7 @@ class VideoBackground {
   /**
    * Merge configuration properties with defaults with minimal validation.
    */
-  initializeProperties(props = {}) {
+  setDefaultProperties(props = {}) {
     props = Object.assign({}, DEFAULT_PROPERTY_VALUES, props);
     if (props.container.nodeType === 1) {
       this.container = props.container;
@@ -152,7 +142,7 @@ class VideoBackground {
   }
 
   /**
-   * The ID is the only unique property need to use in the YouTube and Vimeo APIs.
+   * The ID is the only unique property needed to use in the YouTube and Vimeo APIs.
    */
   getVideoID(value) {
     if (!value) {
@@ -191,18 +181,18 @@ class VideoBackground {
   }
 
   /**
-   * Determine which API to use
+   * Load the API for the appropriate source, then
    */
-  callVideoAPI() {
-    const initializeAPIFunction = videoSourceModules[this.videoSource].api;
+  initializeVideoAPI() {
+    const sourceAPIFunction = videoSourceModules[this.videoSource].api;
     if (this.canAutoPlay) {
       this.player.ready = false;
 
-      const apiPromise = initializeAPIFunction(this.windowContext);
+      const apiPromise = sourceAPIFunction(this.windowContext);
       apiPromise.then((message) => {
         this.logger(message);
         this.player.ready = false;
-        this.setVideoPlayer();
+        this.initializeVideoPlayer();
       }).catch((message) => {
         this.canAutoPlay = false;
         this.container.classList.add('mobile');
@@ -215,7 +205,7 @@ class VideoBackground {
   /**
    * Initialize the video player and register its callbacks
    */
-  setVideoPlayer() {
+  initializeVideoPlayer() {
     if (this.player.ready) {
       try {
         this.player.destroy();
@@ -225,8 +215,8 @@ class VideoBackground {
       }
     }
 
-    const initializePlayerFunction = videoSourceModules[this.videoSource].player;
-    const playerPromise = initializePlayerFunction({
+    const sourcePlayerFunction = videoSourceModules[this.videoSource].player;
+    const playerPromise = sourcePlayerFunction({
       container: this.container,
       win: this.windowContext,
       videoId: this.videoId,
@@ -486,7 +476,7 @@ class VideoBackground {
       return;
     }
 
-    console.log(msg);
+    this.windowContext.console.log(msg);
   }
 }
 
