@@ -265,7 +265,24 @@ class VideoBackground {
         this.player = player;
       });
     } else if (this.videoSource === 'vimeo') {
-      initializeVimeoPlayer(this);
+      const playerPromise = initializeVimeoPlayer({
+        container: this.container,
+        win: this.windowContext,
+        videoId: this.videoId,
+        startTime: this.timeCode.start,
+        readyCallback: (player) => {
+          player.iframe.classList.add('background-video');
+          this.syncPlayer();
+          const readyEvent = new CustomEvent('ready');
+          this.container.dispatchEvent(readyEvent);
+          document.body.classList.add('ready');
+          this.autoPlayTestTimeout();
+        },
+        context: this
+      });
+      playerPromise.then((player) => {
+        this.player = player;
+      });
     }
   }
 
