@@ -51,7 +51,7 @@ class VideoBackground {
     this.windowContext = windowContext;
     this.events = [];
 
-    this.setDefaultProperties(props);
+    this.setProperties(props);
     testAutoPlay().then((value) => {
       this.logger(value);
       this.canAutoPlay = true;
@@ -115,7 +115,7 @@ class VideoBackground {
   /**
    * Merge configuration properties with defaults with minimal validation.
    */
-  setDefaultProperties(props = {}) {
+  setProperties(props = {}) {
     props = Object.assign({}, DEFAULT_PROPERTY_VALUES, props);
     if (props.container.nodeType === 1) {
       this.container = props.container;
