@@ -12,7 +12,7 @@ npm install --save @squarespace/video-background-rendering
 ```
 
 ```js
-import { VideoBackground as VideoBackgroundRenderer } from '@squarespaces/video-background-rendering';
+import { VideoBackground as VideoBackgroundRenderer } from '@squarespace/video-background-rendering';
 const config = {
   container: document.documentElement.querySelector('#myContainer'),
   url: 'https://www.youtube.com/watch?v=IWBcS6sDIDM'
