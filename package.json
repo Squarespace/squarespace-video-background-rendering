@@ -1,6 +1,6 @@
 {
   "name": "@squarespace/video-background-rendering",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "author": "Squarespace, Inc.",
   "description": "JavaScript for rending a video background from a YouTube or Vimeo URL",
   "license": "SEE LICENSE IN LICENSE.txt",
