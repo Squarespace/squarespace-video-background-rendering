@@ -13,7 +13,7 @@ const DEFAULT_PROPERTY_VALUES = {
   'filter': 1,
   'filterStrength': 50,
   'timeCode': { 'start': 0, 'end': null },
-  'useCustomFallbackImage': false
+  'useCustomFallbackImage': true
 };
 
 const FILTER_OPTIONS = require('./constants/filter.js').filterOptions;
@@ -94,7 +94,7 @@ class VideoBackground {
         });
       } else if (this.useCustomFallbackImage && this.windowContext.ImageLoader) {
         const customFallbackImage = this.container.querySelector('img[data-src]');
-        this.windowContext.ImageLoader.load(customFallbackImage, true);
+        this.windowContext.ImageLoader.load(customFallbackImage, { load: true });
       }
     };
     this.events.push({
@@ -163,7 +163,10 @@ class VideoBackground {
    */
   setFallbackImage() {
     if (this.useCustomFallbackImage) {
-      const customFallbackImage = this.container.querySelector('.custom-fallback-image');
+      const customFallbackImage = this.container.querySelector('img[data-src]');
+      if (!customFallbackImage) {
+        return;
+      }
       customFallbackImage.addEventListener('load', () => {
         customFallbackImage.classList.add('loaded');
       });
