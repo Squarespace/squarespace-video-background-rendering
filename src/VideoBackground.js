@@ -27,7 +27,6 @@ const DEFAULT_PROPERTY_VALUES = {
   'filter': 1,
   'filterStrength': 50,
   'timeCode': { 'start': 0, 'end': null },
-  'useCustomFallbackImage': true,
   DEBUG_VERBOSE
 };
 
@@ -129,7 +128,6 @@ class VideoBackground {
     this.videoId = this.getVideoID(props.url);
     this.filter = props.filter;
     this.filterStrength = props.filterStrength;
-    this.useCustomFallbackImage = props.useCustomFallbackImage;
     this.fitMode = props.fitMode;
     this.scaleFactor = props.scaleFactor;
     this.playbackSpeed = parseFloat(props.playbackSpeed) === 0.0 ? 1 : parseFloat(props.playbackSpeed);
@@ -190,16 +188,14 @@ class VideoBackground {
    * Sets a custom fallback image
    */
   setFallbackImage() {
-    if (this.useCustomFallbackImage && this.windowContext.ImageLoader) {
-      const customFallbackImage = this.container.querySelector('img[data-src]');
-      if (!customFallbackImage) {
-        return;
-      }
-      customFallbackImage.addEventListener('load', () => {
-        customFallbackImage.classList.add('loaded');
-      });
-      this.windowContext.ImageLoader.load(customFallbackImage, { load: true });
+    const customFallbackImage = this.container.querySelector('img[data-src]');
+    if (!customFallbackImage) {
+      return;
     }
+    customFallbackImage.addEventListener('load', () => {
+      customFallbackImage.classList.add('loaded');
+    });
+    window.ImageLoader.load(customFallbackImage, { load: true });
   }
 
   /**
