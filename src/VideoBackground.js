@@ -411,7 +411,6 @@ class VideoBackground {
       if (!player.dimensions.width || !player.dimensions.height || !player.duration) {
         return;
       }
-      console.log('here');
       this.syncPlayer();
 
       const readyEvent = new CustomEvent('ready');
