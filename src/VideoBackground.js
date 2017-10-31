@@ -1,7 +1,10 @@
 import parseUrl from 'url-parse';
 import testAutoPlay from './utils/videoAutoplayTest';
 
-const DEBUG = false;
+// Adds instance to the window for debugging
+const DEBUG = true;
+// Allows logging in detail
+const DEBUG_VERBOSE = false;
 
 const DEFAULT_PROPERTY_VALUES = {
   'container': '.background-wrapper',
@@ -13,7 +16,8 @@ const DEFAULT_PROPERTY_VALUES = {
   'filter': 1,
   'filterStrength': 50,
   'timeCode': { 'start': 0, 'end': null },
-  'useCustomFallbackImage': true
+  'useCustomFallbackImage': true,
+  DEBUG_VERBOSE
 };
 
 const FILTER_OPTIONS = require('./constants/filter.js').filterOptions;
@@ -38,12 +42,15 @@ class VideoBackground {
 
     this.initializeProperties(props);
     testAutoPlay().then((value) => {
+      this.logger(value);
       this.canAutoPlay = true;
     }, (reason) => {
+      this.logger(reason);
       this.canAutoPlay = false;
       this.container.classList.add('mobile');
       this.logger('added mobile');
     }).then((value) => {
+      this.logger(value);
       this.setDisplayEffects();
       this.setFallbackImage();
       this.callVideoAPI();
@@ -92,9 +99,8 @@ class VideoBackground {
         this.windowContext.requestAnimationFrame(() => {
           this.scaleVideo();
         });
-      } else if (this.useCustomFallbackImage && this.windowContext.ImageLoader) {
-        const customFallbackImage = this.container.querySelector('img[data-src]');
-        this.windowContext.ImageLoader.load(customFallbackImage, { load: true });
+      } else {
+        this.setFallbackImage();
       }
     };
     this.events.push({
@@ -132,6 +138,7 @@ class VideoBackground {
     };
     this.player = {};
     this.currentLoop = 0;
+    this.DEBUG_VERBOSE = props.DEBUG_VERBOSE;
   }
 
   /**
@@ -162,7 +169,7 @@ class VideoBackground {
    * custom fallback image exists.
    */
   setFallbackImage() {
-    if (this.useCustomFallbackImage) {
+    if (this.useCustomFallbackImage && this.windowContext.ImageLoader) {
       const customFallbackImage = this.container.querySelector('img[data-src]');
       if (!customFallbackImage) {
         return;
@@ -170,7 +177,7 @@ class VideoBackground {
       customFallbackImage.addEventListener('load', () => {
         customFallbackImage.classList.add('loaded');
       });
-      window.ImageLoader.load(customFallbackImage, { load: true });
+      this.windowContext.ImageLoader.load(customFallbackImage, { load: true });
     }
   }
 
@@ -271,9 +278,6 @@ class VideoBackground {
       this.container.dispatchEvent(readyEvent);
       document.body.classList.add('ready');
       player.ready = true;
-      if (!this.canAutoPlay) {
-        return;
-      }
       if (this.timeCode.start >= player.getDuration()) {
         this.timeCode.start = 0;
       }
@@ -407,6 +411,7 @@ class VideoBackground {
       if (!player.dimensions.width || !player.dimensions.height || !player.duration) {
         return;
       }
+      console.log('here');
       this.syncPlayer();
 
       const readyEvent = new CustomEvent('ready');
@@ -432,6 +437,8 @@ class VideoBackground {
 
     const onPlaying = () => {
       clearTimeout(player.playTimeout);
+      postMessageManager('getVideoHeight');
+      postMessageManager('getVideoWidth');
       player.playTimeout = null;
       player.ready = true;
       player.iframe.classList.add('ready');
@@ -729,7 +736,7 @@ class VideoBackground {
   }
 
   logger(msg) {
-    if (!DEBUG) {
+    if (!DEBUG || !this.DEBUG_VERBOSE) {
       return;
     }
 

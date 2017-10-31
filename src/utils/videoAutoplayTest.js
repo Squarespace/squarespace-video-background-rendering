@@ -58,35 +58,39 @@ const VideoAutoplayTest = () => {
       } else if (elem.canPlayType('video/mp4; codecs="avc1.42E01E"').match(/^(probably)|(maybe)/)) {
         elem.src = Mp4Video;
       } else {
+        elem.remove();
         reject('no autoplay: element does not support mp4 or ogg format');
         return;
       }
     } catch (err) {
+      elem.remove();
       reject('no autoplay: ' + err);
       return;
     }
 
     elem.addEventListener('play', () => {
       elem.setAttribute('data-is-playing', 'true');
+      failsafeTimer = setTimeout(() => {
+        elem.remove();
+        reject('no autoplay: unsure');
+      }, 10000);
     });
 
     elem.addEventListener('canplay', () => {
       if (elem.getAttribute('data-is-playing') === 'true') {
-        resolve('autoplay supported');
+        elem.remove();
         clearTimeout(failsafeTimer);
+        resolve('autoplay supported');
         return true;
       }
-      reject('no autoplay: browser does not support autoplay');
+      elem.remove();
       clearTimeout(failsafeTimer);
+      reject('no autoplay: browser does not support autoplay');
       return false;
     });
 
     elem.load();
     elem.play();
-
-    failsafeTimer = setTimeout(() => {
-      reject('no autoplay: unsure');
-    }, 1000);
   });
 };
 
