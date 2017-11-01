@@ -13,6 +13,7 @@ const DEFAULT_PROPERTY_VALUES = {
   filter: 1,
   filterStrength: 50,
   timeCode: { start: 0, end: null },
+  DEBUG,
   DEBUG_VERBOSE
 }
 

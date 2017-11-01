@@ -15,7 +15,7 @@ const videoSourceModules = {
   }
 }
 
-import { DEBUG, DEFAULT_PROPERTY_VALUES } from './constants/instance'
+import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'
 import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
 import { getVideoID, getVideoSource } from './utils/utils'
@@ -34,7 +34,7 @@ class VideoBackground {
     this.events = []
     this.canAutoPlay = false
 
-    this.setVideoProperties(props)
+    this.setInstanceProperties(props)
 
     // Test browser support for autoplay for video elements
     testBrowserAutoplaySupport().then((value) => {
@@ -53,7 +53,7 @@ class VideoBackground {
       this.initializeVideoAPI()
       this.bindUI()
 
-      if (DEBUG === true) {
+      if (this.DEBUG === true) {
         window.vdbg = this
       }
     })
@@ -96,7 +96,7 @@ class VideoBackground {
   /**
    * Merge configuration properties with defaults with minimal validation.
    */
-  setVideoProperties(props = {}) {
+  setInstanceProperties(props = {}) {
     props = merge({}, DEFAULT_PROPERTY_VALUES, props)
     if (props.container.nodeType === 1) {
       this.container = props.container
@@ -120,6 +120,7 @@ class VideoBackground {
     }
     this.player = {}
     this.currentLoop = 0
+    this.DEBUG = props.DEBUG
     this.DEBUG_VERBOSE = props.DEBUG_VERBOSE
   }
 
@@ -428,7 +429,7 @@ class VideoBackground {
   }
 
   logger(msg) {
-    if (!DEBUG || !this.DEBUG_VERBOSE) {
+    if (!this.DEBUG || !this.DEBUG_VERBOSE) {
       return
     }
 
