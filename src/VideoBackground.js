@@ -1,6 +1,6 @@
 import merge from 'lodash.merge'
 import parseUrl from 'url-parse'
-import testAutoPlay from './utils/videoAutoplayTest'
+import testBrowserAutoplaySupport from './utils/videoAutoplayTest'
 import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo'
 import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube'
 
@@ -37,7 +37,7 @@ class VideoBackground {
     this.setVideoProperties(props)
 
     // Test browser support for autoplay for video elements
-    testAutoPlay().then((value) => {
+    testBrowserAutoplaySupport().then((value) => {
       this.logger(value)
       this.canAutoPlay = true
     }, (reason) => {
@@ -80,22 +80,17 @@ class VideoBackground {
   }
 
   bindUI() {
-    const resizeEvent = typeof window.orientation === 'undefined' ? 'resize' : 'orientationchange'
     const resizeHandler = () => {
-      if (resizeEvent === 'resize' && this.player.iframe) {
-        this.windowContext.requestAnimationFrame(() => {
-          this.scaleVideo()
-        })
-      } else {
-        this.setFallbackImage()
-      }
+      this.windowContext.requestAnimationFrame(() => {
+        this.scaleMedia()
+      })
     }
     this.events.push({
       target: this.windowContext,
       type: 'resize',
       handler: resizeHandler
     })
-    this.windowContext.addEventListener(resizeEvent, resizeHandler, true)
+    this.windowContext.addEventListener('resize', resizeHandler, true)
   }
 
   /**
@@ -133,17 +128,17 @@ class VideoBackground {
    */
   setFallbackImage() {
     const customFallbackImage = this.container.querySelector('img[data-src]')
-    if (!customFallbackImage) {
+    if (!customFallbackImage || !this.windowContext.ImageLoader) {
       return
     }
     customFallbackImage.addEventListener('load', () => {
       customFallbackImage.classList.add('loaded')
-    })
-    window.ImageLoader.load(customFallbackImage, { load: true })
+    }, { once: true })
+    this.windowContext.ImageLoader.load(customFallbackImage, { load: true })
   }
 
   /**
-   * Load the API for the appropriate source, then
+   * Load the API for the appropriate source
    */
   initializeVideoAPI() {
     if (this.canAutoPlay && this.videoSource && this.videoId) {
@@ -174,10 +169,10 @@ class VideoBackground {
     if (this.player.ready) {
       try {
         this.player.destroy()
-        this.player.ready = false
       } catch (e) {
         // nothing to destroy
       }
+      this.player.ready = false
     }
 
     const sourcePlayerFunction = videoSourceModules[this.videoSource].player
@@ -189,6 +184,7 @@ class VideoBackground {
       speed: this.playbackSpeed,
       readyCallback: (player, data) => {
         this.player.iframe.classList.add('background-video')
+        this.videoAspectRatio = this.findPlayerAspectRatio()
         this.syncPlayer()
         const readyEvent = new CustomEvent('ready')
         this.container.dispatchEvent(readyEvent)
@@ -196,9 +192,10 @@ class VideoBackground {
       },
       stateChangeCallback: (state, data) => {
         if (state === 'buffering') {
-          this.autoPlayTestTimeout()
+          this.testVideoEmbedAutoplay({ success: false })
         } else if (state === 'playing') {
           if (this.player.playTimeout !== null) {
+            this.testVideoEmbedAutoplay({ success: true })
             clearTimeout(this.player.playTimeout)
             this.player.playTimeout = null
             this.player.ready = true
@@ -222,14 +219,44 @@ class VideoBackground {
   }
 
   /**
+    * Since we cannot inspect the video element inside the provider's IFRAME to
+    * check for `autoplay` and `playsinline` attributes, set a timeout that will
+    * tell this instance that the media cannot auto play. The timeout will be
+    * cleared via the media's playback API if it does begin playing.
+    */
+  testVideoEmbedAutoplay(options = { success: false }) {
+    if (options.success === true) {
+      clearTimeout(this.player.playTimeout)
+      this.player.playTimeout = null
+      return
+    }
+    this.player.playTimeout = setTimeout(() => {
+      this.canAutoPlay = false
+      this.container.classList.add('mobile')
+      this.player.playTimeout = null
+      this.logger('added mobile')
+    }, 2500)
+  }
+
+  /**
+    * Apply the purely visual effects.
+    */
+  syncPlayer() {
+    this.setDisplayEffects()
+    this.setSpeed()
+    this.scaleMedia()
+  }
+
+  /**
    * The IFRAME will be the entire width and height of its container, but the video
    * may be a completely different size and ratio. Scale up the IFRAME so the inner video
    * behaves in the proper `fitMode`, with optional additional scaling to zoom in.
    */
-  scaleVideo(scaleValue) {
+  scaleMedia(scaleValue) {
+    this.setFallbackImage()
+
     let scale = scaleValue || this.scaleFactor
     const playerIframe = this.player.iframe
-    const videoDimensions = this._findPlayerDimensions()
 
     if (this.fitMode !== 'fill') {
       playerIframe.style.width = ''
@@ -240,18 +267,17 @@ class VideoBackground {
     const containerWidth = playerIframe.parentNode.clientWidth
     const containerHeight = playerIframe.parentNode.clientHeight
     const containerRatio = containerWidth / containerHeight
-    const videoRatio = videoDimensions.width / videoDimensions.height
     let pWidth = 0
     let pHeight = 0
-    if (containerRatio > videoRatio) {
+    if (containerRatio > this.videoAspectRatio) {
       // at the same width, the video is taller than the window
       pWidth = containerWidth * scale
-      pHeight = containerWidth * scale / videoRatio
+      pHeight = containerWidth * scale / this.videoAspectRatio
       playerIframe.style.width = pWidth + 'px'
       playerIframe.style.height = pHeight + 'px'
-    } else if (videoRatio > containerRatio) {
+    } else if (this.videoAspectRatio > containerRatio) {
       // at the same width, the video is shorter than the window
-      pWidth = containerHeight * scale * videoRatio
+      pWidth = containerHeight * scale * this.videoAspectRatio
       pHeight = containerHeight * scale
       playerIframe.style.width = pWidth + 'px'
       playerIframe.style.height = pHeight + 'px'
@@ -279,6 +305,7 @@ class VideoBackground {
    * ensure the effects are visible on the fallback image while loading.
    */
   setDisplayEffects() {
+    // there were to be others here... now so lonely
     this.setFilter()
   }
 
@@ -297,25 +324,15 @@ class VideoBackground {
     // part of the blur, the filer needs to be applied to the player and fallback image,
     // and those elements need to be scaled slightly.
     // No other combination of filter target and scaling seems to work.
-    if (filter === 'blur') {
-      containerStyle.webkitFilter = ''
-      containerStyle.filter = ''
-      this.container.classList.add('filter-blur')
+    const isBlur = filter === 'blur'
+    containerStyle.webkitFilter = isBlur ? '' : filterStyle
+    containerStyle.filter = isBlur ? '' : filterStyle
+    this.container.classList.toggle('filter-blur', isBlur)
 
-      Array.prototype.slice.call(this.container.children).forEach((el) => {
-        el.style.webkitFilter = filterStyle
-        el.style.filter = filterStyle
-      })
-    } else {
-      containerStyle.webkitFilter = filterStyle
-      containerStyle.filter = filterStyle
-      this.container.classList.remove('filter-blur')
-
-      Array.prototype.slice.call(this.container.children).forEach((el) => {
-        el.style.webkitFilter = ''
-        el.style.filter = ''
-      })
-    }
+    Array.prototype.slice.call(this.container.children).forEach((el) => {
+      el.style.webkitFilter = !isBlur ? '' : filterStyle
+      el.style.filter = !isBlur ? '' : filterStyle
+    })
   }
 
   /**
@@ -332,7 +349,7 @@ class VideoBackground {
    * Since this is not part of the pbulic API, the dimensions will fall back to the
    * container width and height, in case YouTube changes the internals unexpectedly.
    */
-  _findPlayerDimensions() {
+  findPlayerAspectRatio() {
     let w
     let h
     const player = this.player
@@ -359,10 +376,7 @@ class VideoBackground {
       h = this.container.clientHeight
       console.warn('Video player dimensions not found.')
     }
-    return {
-      'width': w,
-      'height': h
-    }
+    return parseInt(w, 10) / parseInt(h, 10)
   }
 
   /**
@@ -411,29 +425,6 @@ class VideoBackground {
       timeParam = parsedUrl.hash
     }
     return timeParam
-  }
-
-  /**
-    * Since we cannot inspect the video element inside the provider's IFRAME to
-    * check for `autoplay` and `playsinline` attributes, set a timeout that will
-    * tell this instance that the media cannot auto play. The timeout will be
-    * cleared via the media's playback API if it does begin playing.
-    */
-  autoPlayTestTimeout() {
-    this.player.playTimeout = setTimeout(() => {
-      this.canAutoPlay = false
-      this.container.classList.add('mobile')
-      this.logger('added mobile')
-    }, 2500)
-  }
-
-  /**
-    * Apply the purely visual effects.
-    */
-  syncPlayer() {
-    this.setDisplayEffects()
-    this.setSpeed()
-    this.scaleVideo()
   }
 
   logger(msg) {

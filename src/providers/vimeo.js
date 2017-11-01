@@ -61,6 +61,7 @@ const initializeVimeoPlayer = (config) => {
     postMessageManager('play');
     postMessageManager('addEventListener', 'playProgress');
 
+    config.stateChangeCallback('buffering');
     config.readyCallback(player);
   };
 
