@@ -1,7 +1,7 @@
-// Adds the Class instance to the window for easier debugging
-const DEBUG = true
-// Allows logging in detail
-const DEBUG_VERBOSE = false
+const DEBUG = {
+  enabled: true, // Adds the Class instance to the window for easier debugging
+  verbose: false // Allows logging in detail
+}
 
 const DEFAULT_PROPERTY_VALUES = {
   container: '.background-wrapper',
@@ -13,8 +13,7 @@ const DEFAULT_PROPERTY_VALUES = {
   filter: 1,
   filterStrength: 50,
   timeCode: { start: 0, end: null },
-  DEBUG,
-  DEBUG_VERBOSE
+  DEBUG
 }
 
 // eslint-disable-next-line no-useless-escape
@@ -24,7 +23,6 @@ const VIMEO_REGEX = /^.*(vimeo\.com\/)([0-9]{7,}(#t\=.*s)?)/
 
 export {
   DEBUG,
-  DEBUG_VERBOSE,
   DEFAULT_PROPERTY_VALUES,
   YOUTUBE_REGEX,
   VIMEO_REGEX

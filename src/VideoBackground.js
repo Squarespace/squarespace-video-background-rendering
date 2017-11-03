@@ -2,6 +2,10 @@ import merge from 'lodash.merge'
 import testBrowserAutoplaySupport from './utils/videoAutoplayTest'
 import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo'
 import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube'
+import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
+import { filterOptions as FILTER_OPTIONS } from './constants/filter'
+import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
+import { getStartTime, getVideoID, getVideoSource, validatedImage } from './utils/utils'
 
 const videoSourceModules = {
   vimeo: {
@@ -14,10 +18,6 @@ const videoSourceModules = {
   }
 }
 
-import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
-import { filterOptions as FILTER_OPTIONS } from './constants/filter'
-import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
-import { getStartTime, getVideoID, getVideoSource, validatedImage } from './utils/utils'
 /**
  * A class which uses the YouTube or Vimeo APIs to initialize an IFRAME with an embedded player.
  * Additional display options and functionality are configured through a set of properties,
@@ -50,7 +50,7 @@ class VideoBackground {
       this.initializeVideoAPI()
       this.bindUI()
 
-      if (this.DEBUG === true) {
+      if (this.DEBUG.enabled === true) {
         window.vdbg = this
       }
     })
@@ -115,13 +115,11 @@ class VideoBackground {
     this.scaleFactor = props.scaleFactor
     this.playbackSpeed = parseFloat(props.playbackSpeed) === 0.0 ? 1 : parseFloat(props.playbackSpeed)
     this.timeCode = {
-      start: getStartTime(props.url) || props.timeCode.start,
+      start: getStartTime(props.url, this.videoSource) || props.timeCode.start,
       end: props.timeCode.end
     }
     this.player = {}
-    this.currentLoop = 0
     this.DEBUG = props.DEBUG
-    this.DEBUG_VERBOSE = props.DEBUG_VERBOSE
   }
 
   /**
@@ -426,7 +424,7 @@ class VideoBackground {
    * @return {undefined}
    */
   logger(msg) {
-    if (!this.DEBUG || !this.DEBUG_VERBOSE) {
+    if (!this.DEBUG.enabled || !this.DEBUG.verbose) {
       return
     }
 

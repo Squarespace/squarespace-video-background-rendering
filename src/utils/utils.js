@@ -7,16 +7,16 @@ import parseUrl from 'url-parse'
  *    playback to begin from a certain point in the video.
  * @return {String or false} The appropriate time parameter or false.
  */
-const getTimeParameter = (parsedUrl) => {
-  if ((this.videoSource === 'youtube' && (!parsedUrl.query || !parsedUrl.query.t)) ||
-    (this.videoSource === 'vimeo' && (!parsedUrl.hash))
+const getTimeParameter = (parsedUrl, source) => {
+  if ((source === 'youtube' && (!parsedUrl.query || !parsedUrl.query.t)) ||
+    (source === 'vimeo' && (!parsedUrl.hash))
   ) {
     return false
   }
   let timeParam
-  if (this.videoSource === 'youtube') {
+  if (source === 'youtube') {
     timeParam = parsedUrl.query.t
-  } else if (this.videoSource === 'vimeo') {
+  } else if (source === 'vimeo') {
     timeParam = parsedUrl.hash
   }
   return timeParam
@@ -27,7 +27,7 @@ const getTimeParameter = (parsedUrl) => {
  * @param {String} [url] The URL for the video, including any time code parameters.
  * @return {Number} Time in seconds
  */
-const getStartTime = (url) => {
+const getStartTime = (url, source) => {
   const parsedUrl = new parseUrl(url, true)
   let timeParam = getTimeParameter(parsedUrl)
   if (!timeParam) {
@@ -38,7 +38,7 @@ const getStartTime = (url) => {
   const timeRegexVimeo = /[#t=s]/
 
   let match
-  switch (this.videoSource) {
+  switch (source) {
   case 'youtube' :
     match = timeParam.split(timeRegexYoutube).filter(Boolean)
     break
@@ -53,43 +53,48 @@ const getStartTime = (url) => {
 }
 
 /**
- * Determine the video source from the URL via regex.
+ * @method getVideoSource Determine the video source from the URL via regex.
+ * @param {String} [url] The URL for the video
+ * @return {String} Video provider name
  */
-const getVideoSource = (value = DEFAULT_PROPERTY_VALUES.url) => {
-  let match = value.match(YOUTUBE_REGEX)
+const getVideoSource = (url = DEFAULT_PROPERTY_VALUES.url) => {
+  let match = url.match(YOUTUBE_REGEX)
   if (match && match[2].length) {
     return 'youtube'
   }
 
-  match = value.match(VIMEO_REGEX)
+  match = url.match(VIMEO_REGEX)
   if (match && match[2].length) {
     return 'vimeo'
   }
 
-  console.error(`Video source ${ value } does not match supported types`)
-  return null
+  console.error(`Video source ${ url } does not match supported types`)
 }
 
 /**
- * Get the video ID for use in the provider APIs.
+ * @method getVideoId Get the video ID for use in the provider APIs.
+ * @param {String} [url] The URL for the video
+ * @param {String} [source] Video provider name
+ * @return {String} Video ID
  */
-const getVideoID = (value = DEFAULT_PROPERTY_VALUES.url, source = 'youtube') => {
+const getVideoID = (url = DEFAULT_PROPERTY_VALUES.url, source = null) => {
   let match
   if (source === 'youtube') {
-    match = value.match(YOUTUBE_REGEX)
+    match = url.match(YOUTUBE_REGEX)
   } else if (source === 'vimeo') {
-    match = value.match(VIMEO_REGEX)
+    match = url.match(VIMEO_REGEX)
   }
   if (match && match[2].length) {
     return match[2]
   }
 
-  console.error(`Video id at ${ value } is not valid`)
-  return null
+  console.error(`Video id at ${ url } is not valid`)
 }
 
 /**
- * Ensure the element is an image
+ * @method validatedImage Ensure the element is an image
+ * @param {Node} [img] Image element
+ * @return {Node or false}
  */
 const validatedImage = (img) => {
   if (!img) {
