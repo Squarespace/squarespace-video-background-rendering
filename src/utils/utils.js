@@ -37,4 +37,19 @@ const getVideoID = (value = DEFAULT_PROPERTY_VALUES.url, source = 'youtube') => 
   return null
 }
 
-export { getVideoID, getVideoSource }
+/**
+ * Ensure the element is an image
+ */
+const validatedImage = (img) => {
+  if (!img) {
+    return false
+  }
+  let isValid = img.nodeName === 'IMG' ? img : false;
+  if (!isValid) {
+    console.warn('Element is not a valid image element.');
+  }
+
+  return isValid
+}
+
+export { getVideoID, getVideoSource, validatedImage }

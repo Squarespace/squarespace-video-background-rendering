@@ -18,7 +18,7 @@ const videoSourceModules = {
 import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'
 import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
-import { getVideoID, getVideoSource } from './utils/utils'
+import { getVideoID, getVideoSource, validatedImage } from './utils/utils'
 /**
  * A class which uses the YouTube or Vimeo APIs to initialize an IFRAME with an embedded player.
  * Additional display options and functionality are configured through a set of properties,
@@ -109,6 +109,7 @@ class VideoBackground {
     }
     this.videoSource = getVideoSource(props.url)
     this.videoId = getVideoID(props.url, this.videoSource)
+    this.customFallbackImage = validatedImage(props.customFallbackImage)
     this.filter = props.filter
     this.filterStrength = props.filterStrength
     this.fitMode = props.fitMode
@@ -128,7 +129,7 @@ class VideoBackground {
    * Sets a custom fallback image
    */
   setFallbackImage() {
-    const customFallbackImage = this.container.querySelector('img[data-src]')
+    const customFallbackImage = this.customFallbackImage
     if (!customFallbackImage || !this.windowContext.ImageLoader) {
       return
     }
@@ -256,8 +257,12 @@ class VideoBackground {
   scaleMedia(scaleValue) {
     this.setFallbackImage()
 
-    let scale = scaleValue || this.scaleFactor
     const playerIframe = this.player.iframe
+    if (!playerIframe) {
+      return
+    }
+
+    let scale = scaleValue || this.scaleFactor
 
     if (this.fitMode !== 'fill') {
       playerIframe.style.width = ''
