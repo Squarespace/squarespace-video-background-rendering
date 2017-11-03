@@ -1,5 +1,4 @@
 import merge from 'lodash.merge'
-import parseUrl from 'url-parse'
 import testBrowserAutoplaySupport from './utils/videoAutoplayTest'
 import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo'
 import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube'
@@ -18,7 +17,7 @@ const videoSourceModules = {
 import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'
 import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
-import { getVideoID, getVideoSource, validatedImage } from './utils/utils'
+import { getStartTime, getVideoID, getVideoSource, validatedImage } from './utils/utils'
 /**
  * A class which uses the YouTube or Vimeo APIs to initialize an IFRAME with an embedded player.
  * Additional display options and functionality are configured through a set of properties,
@@ -43,9 +42,7 @@ class VideoBackground {
     }, (reason) => {
       // If there is no browser support, go to fall back behavior
       this.logger(reason)
-      this.canAutoPlay = false
-      this.container.classList.add('mobile')
-      this.logger('added mobile')
+      this.renderFallbackBehavior()
     }).then((value) => {
       this.logger(value)
       this.setDisplayEffects()
@@ -94,7 +91,9 @@ class VideoBackground {
   }
 
   /**
-   * Merge configuration properties with defaults with minimal validation.
+   * @method setInstanceProperties Merge configuration properties with defaults with some minimal validation.
+   * @param {Object} [props] Configuration options
+   * @return {undefined}
    */
   setInstanceProperties(props = {}) {
     props = merge({}, DEFAULT_PROPERTY_VALUES, props)
@@ -116,7 +115,7 @@ class VideoBackground {
     this.scaleFactor = props.scaleFactor
     this.playbackSpeed = parseFloat(props.playbackSpeed) === 0.0 ? 1 : parseFloat(props.playbackSpeed)
     this.timeCode = {
-      start: this._getStartTime(props.url) || props.timeCode.start,
+      start: getStartTime(props.url) || props.timeCode.start,
       end: props.timeCode.end
     }
     this.player = {}
@@ -126,11 +125,12 @@ class VideoBackground {
   }
 
   /**
-   * Sets a custom fallback image
+   * @method setFallbackImage Loads a custom fallback image if the player cannot autoplay.
+   * @return {undefined}
    */
   setFallbackImage() {
     const customFallbackImage = this.customFallbackImage
-    if (!customFallbackImage || !this.windowContext.ImageLoader) {
+    if (!customFallbackImage || !this.windowContext.ImageLoader || this.canAutoPlay) {
       return
     }
     customFallbackImage.addEventListener('load', () => {
@@ -140,7 +140,9 @@ class VideoBackground {
   }
 
   /**
-   * Load the API for the appropriate source
+   * @method initializeVideoAPI Load the API for the appropriate source. This abstraction normalizes the
+   * interfaces for YouTube and Vimeo, and potentially other providers.
+   * @return {undefined}
    */
   initializeVideoAPI() {
     if (this.canAutoPlay && this.videoSource && this.videoId) {
@@ -153,19 +155,19 @@ class VideoBackground {
         this.player.ready = false
         this.initializeVideoPlayer()
       }).catch((message) => {
-        this.canAutoPlay = false
-        this.container.classList.add('mobile')
+        this.renderFallbackBehavior()
         document.body.classList.add('ready')
         this.logger(message)
       })
     } else {
-      this.container.classList.add('mobile')
+      this.renderFallbackBehavior()
       document.body.classList.add('ready')
     }
   }
 
   /**
-   * Initialize the video player and register its callbacks
+   * @method initializeVideoPlayer Initialize the video player and register its callbacks.
+   * @return {undefined}
    */
   initializeVideoPlayer() {
     if (this.player.ready) {
@@ -194,10 +196,10 @@ class VideoBackground {
       },
       stateChangeCallback: (state, data) => {
         if (state === 'buffering') {
-          this.testVideoEmbedAutoplay({ success: false })
+          this.testVideoEmbedAutoplay()
         } else if (state === 'playing') {
           if (this.player.playTimeout !== null) {
-            this.testVideoEmbedAutoplay({ success: true })
+            this.testVideoEmbedAutoplay(true)
             clearTimeout(this.player.playTimeout)
             this.player.playTimeout = null
             this.player.ready = true
@@ -221,27 +223,51 @@ class VideoBackground {
   }
 
   /**
-    * Since we cannot inspect the video element inside the provider's IFRAME to
+    * @method testVideoEmbedAutoplay Since we cannot inspect the video element inside the provider's IFRAME to
     * check for `autoplay` and `playsinline` attributes, set a timeout that will
     * tell this instance that the media cannot auto play. The timeout will be
     * cleared via the media's playback API if it does begin playing.
+    * @param {boolean} [success] Call the method initially without this param to begin
+    *   the test. Call again as `true` to clear the timeout and prevent mobile fallback behavior.
+    * @return {undefined}
     */
-  testVideoEmbedAutoplay(options = { success: false }) {
-    if (options.success === true) {
+  testVideoEmbedAutoplay(success = undefined) {
+    if (success === undefined) {
+      this.player.playTimeout = setTimeout(() => {
+        this.renderFallbackBehavior()
+        this.player.playTimeout = null
+        this.logger('added mobile')
+      }, 2500)
+    }
+    if (success === true) {
       clearTimeout(this.player.playTimeout)
       this.player.playTimeout = null
       return
     }
-    this.player.playTimeout = setTimeout(() => {
-      this.canAutoPlay = false
-      this.container.classList.add('mobile')
+    //Primarily for testing or future compatibility
+    if (success === false) {
+      clearTimeout(this.player.playTimeout)
+      this.renderFallbackBehavior()
       this.player.playTimeout = null
+      this.setFallbackImage()
       this.logger('added mobile')
-    }, 2500)
+      return
+    }
   }
 
   /**
-    * Apply the purely visual effects.
+    * @method testVideoEmbedAutoplay Initialize mobile fallback behavior
+    * @return {undefined}
+    */
+  renderFallbackBehavior() {
+    this.canAutoPlay = false
+    this.container.classList.add('mobile')
+    this.logger('added mobile')
+  }
+
+  /**
+    * @method syncPlayer Apply the purely visual effects.
+    * @return {undefined}
     */
   syncPlayer() {
     this.setDisplayEffects()
@@ -250,9 +276,12 @@ class VideoBackground {
   }
 
   /**
-   * The IFRAME will be the entire width and height of its container, but the video
+   * @method scaleMedia The IFRAME will be the entire width and height of its container, but the video
    * may be a completely different size and ratio. Scale up the IFRAME so the inner video
-   * behaves in the proper `fitMode`, with optional additional scaling to zoom in.
+   * behaves in the proper `fitMode`, with optional additional scaling to zoom in. Also allow
+   * ImageLoader to reload the custom fallback image, if appropriate.
+   * @param {Number} [scaleValue] A multipiler used to increase the scaled size of the media.
+   * @return {undefined}
    */
   scaleMedia(scaleValue) {
     this.setFallbackImage()
@@ -267,7 +296,7 @@ class VideoBackground {
     if (this.fitMode !== 'fill') {
       playerIframe.style.width = ''
       playerIframe.style.height = ''
-      return false
+      return
     }
 
     const containerWidth = playerIframe.parentNode.clientWidth
@@ -299,7 +328,9 @@ class VideoBackground {
   }
 
   /**
-   * Play back speed options, based on the YouTube API options.
+   * @method setSpeed Play back speed options, based on the YouTube API options.
+   * @param {Number} [speedValue] Set the playback rate for YouTube videos.
+   * @return {undefined}
    */
   setSpeed(speedValue) {
     this.playbackSpeed = parseFloat(this.playbackSpeed)
@@ -307,8 +338,9 @@ class VideoBackground {
   }
 
   /**
-   * All diplay related effects should be applied prior to the video loading to
-   * ensure the effects are visible on the fallback image while loading.
+   * @method setDisplayEffects All diplay related effects should be applied prior to the
+   * video loading to ensure the effects are visible on the fallback image, as well.
+   * @return {undefined}
    */
   setDisplayEffects() {
     // there were to be others here... now so lonely
@@ -316,7 +348,8 @@ class VideoBackground {
   }
 
   /**
-   * Apply filter with values based on filterStrength.
+   * @method setFilter Apply filter with values based on filterStrength.
+   * @return {undefined}
    */
   setFilter() {
     const containerStyle = this.container.style
@@ -327,9 +360,7 @@ class VideoBackground {
     }
 
     // To prevent the blur effect from displaying the background at the edges as
-    // part of the blur, the filer needs to be applied to the player and fallback image,
-    // and those elements need to be scaled slightly.
-    // No other combination of filter target and scaling seems to work.
+    // part of the blur the media elements need to be scaled slightly.
     const isBlur = filter === 'blur'
     containerStyle.webkitFilter = isBlur ? '' : filterStyle
     containerStyle.filter = isBlur ? '' : filterStyle
@@ -342,24 +373,29 @@ class VideoBackground {
   }
 
   /**
-   * Construct the style based on the filter, strength and `FILTER_PROPERTIES`.
+   * @method getFilterStyle Construct the style based on the filter, strength and `FILTER_PROPERTIES`.
+   * @param {String} [filter] A string from `FILTER_PROPERTIES`.
+   * @param {Number}[strength] A number from 0 to 100 to apply to the filter.
    */
   getFilterStyle(filter, strength) {
-    return `${ filter }(${ FILTER_PROPERTIES[filter].modifier(strength) + FILTER_PROPERTIES[filter].unit })`
+    return `${filter}(${FILTER_PROPERTIES[filter].modifier(strength) + FILTER_PROPERTIES[filter].unit})`
   }
 
   /**
-   * The YouTube API seemingly does not expose the actual width and height dimensions
-   * of the video itself. The video's dimensions and ratio may be completely different
-   * than the IFRAME's. This hack finds those values inside some private objects.
-   * Since this is not part of the pbulic API, the dimensions will fall back to the
-   * container width and height, in case YouTube changes the internals unexpectedly.
+   * @method findPlayerAspectRatio Determine the aspect ratio of the actual video itself,
+   *    which may be different than the IFRAME returned by the video provider.
+   * @return {Number} A ratio of width divided by height.
    */
   findPlayerAspectRatio() {
     let w
     let h
     const player = this.player
     if (this.videoSource === 'youtube' && player) {
+      // The YouTube API seemingly does not expose the actual width and height dimensions
+      // of the video itself. The video's dimensions and ratio may be completely different
+      // than the IFRAME's. This hack finds those values inside some private objects.
+      // Since this is not part of the public API, the dimensions will fall back to the
+      // container width and height in case YouTube changes the internals unexpectedly.
       for (let p in player) {
         let prop = player[p]
         if (typeof prop === 'object' && prop.width && prop.height) {
@@ -386,53 +422,9 @@ class VideoBackground {
   }
 
   /**
-   * Get the start time base on the URL formats of YouTube and Vimeo.
+   * @method logger A guarded console logger.
+   * @return {undefined}
    */
-  _getStartTime(url) {
-    const parsedUrl = new parseUrl(url, true)
-    let timeParam = this._getTimeParameter(parsedUrl)
-    if (!timeParam) {
-      return false
-    }
-
-    const timeRegexYoutube = /[hms]/
-    const timeRegexVimeo = /[#t=s]/
-
-    let match
-    switch (this.videoSource) {
-    case 'youtube' :
-      match = timeParam.split(timeRegexYoutube).filter(Boolean)
-      break
-    case 'vimeo' :
-      match = timeParam.split(timeRegexVimeo).filter(Boolean)
-      break
-    }
-    let s = parseInt(match.pop(), 10) || 0
-    let m = parseInt(match.pop(), 10) * 60 || 0
-    let h = parseInt(match.pop(), 10) * 3600 || 0
-    return h + m + s
-  }
-
-  /**
-   * YouTube and Vimeo have optional URL formats to allow playback at a certain
-   * timecode.
-   * Returns the appropriate time parameter or false.
-   */
-  _getTimeParameter(parsedUrl) {
-    if ((this.videoSource === 'youtube' && (!parsedUrl.query || !parsedUrl.query.t)) ||
-      (this.videoSource === 'vimeo' && (!parsedUrl.hash))
-    ) {
-      return false
-    }
-    let timeParam
-    if (this.videoSource === 'youtube') {
-      timeParam = parsedUrl.query.t
-    } else if (this.videoSource === 'vimeo') {
-      timeParam = parsedUrl.hash
-    }
-    return timeParam
-  }
-
   logger(msg) {
     if (!this.DEBUG || !this.DEBUG_VERBOSE) {
       return
