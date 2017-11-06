@@ -28,14 +28,19 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-const DEBUG = false;
+const DEBUG = false; // `reject`, `resolve`, or false
 
 const { OggVideo, Mp4Video } = require('../constants/videoTestBlobs');
 
+/**
+ * @method VideoAutoplayTest Dynamically creates a video element to test browser support
+ *    for autoplay, given the proper browser vendor conditions are met.
+ * @return {Promise}
+ */
 const VideoAutoplayTest = () => {
   return new Promise((resolve, reject) => {
     if (DEBUG === 'resolve') {
-      resolve(true);
+      resolve('resolved for debugging');
       return;
     } else if (DEBUG === 'reject') {
       reject('rejected for debugging');

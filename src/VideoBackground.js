@@ -31,23 +31,23 @@ class VideoBackground {
   constructor(props, windowContext = window) {
     this.windowContext = windowContext
     this.events = []
-    this.canAutoPlay = false
+    this.browserCanAutoPlay = false
+    this.videoCanAutoPlay = false
 
     this.setInstanceProperties(props)
 
     // Test browser support for autoplay for video elements
     testBrowserAutoplaySupport().then((value) => {
       this.logger(value)
-      this.canAutoPlay = true
+      this.browserCanAutoPlay = true
+      this.initializeVideoAPI()
     }, (reason) => {
       // If there is no browser support, go to fall back behavior
       this.logger(reason)
+      this.browserCanAutoPlay = false
       this.renderFallbackBehavior()
-    }).then((value) => {
-      this.logger(value)
+    }).then(() => {
       this.setDisplayEffects()
-      this.setFallbackImage()
-      this.initializeVideoAPI()
       this.bindUI()
 
       if (this.DEBUG.enabled === true) {
@@ -128,7 +128,7 @@ class VideoBackground {
    */
   setFallbackImage() {
     const customFallbackImage = this.customFallbackImage
-    if (!customFallbackImage || !this.windowContext.ImageLoader || this.canAutoPlay) {
+    if (!customFallbackImage || !this.windowContext.ImageLoader || (this.browserCanAutoPlay && this.videoCanAutoPlay)) {
       return
     }
     customFallbackImage.addEventListener('load', () => {
@@ -143,7 +143,7 @@ class VideoBackground {
    * @return {undefined}
    */
   initializeVideoAPI() {
-    if (this.canAutoPlay && this.videoSource && this.videoId) {
+    if (this.browserCanAutoPlay && this.videoSource && this.videoId) {
       this.player.ready = false
 
       const sourceAPIFunction = videoSourceModules[this.videoSource].api
@@ -179,6 +179,7 @@ class VideoBackground {
 
     const sourcePlayerFunction = videoSourceModules[this.videoSource].player
     const playerPromise = sourcePlayerFunction({
+      instance: this,
       container: this.container,
       win: this.windowContext,
       videoId: this.videoId,
@@ -196,17 +197,8 @@ class VideoBackground {
         if (state === 'buffering') {
           this.testVideoEmbedAutoplay()
         } else if (state === 'playing') {
-          if (this.player.playTimeout !== null) {
+          if (this.player.playTimeout !== null || !this.videoCanAutoPlay) {
             this.testVideoEmbedAutoplay(true)
-            clearTimeout(this.player.playTimeout)
-            this.player.playTimeout = null
-            this.player.ready = true
-            this.player.iframe.classList.add('ready')
-
-            if (!this.canAutoPlay) {
-              this.canAutoPlay = true
-              this.container.classList.remove('mobile')
-            }
           }
         }
         if (data) {
@@ -231,24 +223,27 @@ class VideoBackground {
     */
   testVideoEmbedAutoplay(success = undefined) {
     if (success === undefined) {
+      this.logger('test video autoplay: begin')
       this.player.playTimeout = setTimeout(() => {
-        this.renderFallbackBehavior()
-        this.player.playTimeout = null
-        this.logger('added mobile')
+        this.testVideoEmbedAutoplay(false)
       }, 2500)
     }
     if (success === true) {
       clearTimeout(this.player.playTimeout)
+      this.logger('test video autoplay: success')
       this.player.playTimeout = null
+      this.videoCanAutoPlay = true
+      this.player.ready = true
+      this.player.iframe.classList.add('ready')
+      this.container.classList.remove('mobile')
       return
     }
-    //Primarily for testing or future compatibility
     if (success === false) {
       clearTimeout(this.player.playTimeout)
-      this.renderFallbackBehavior()
+      this.logger('test video autoplay: failure')
       this.player.playTimeout = null
-      this.setFallbackImage()
-      this.logger('added mobile')
+      this.videoCanAutoPlay = false
+      this.renderFallbackBehavior()
       return
     }
   }
@@ -258,7 +253,7 @@ class VideoBackground {
     * @return {undefined}
     */
   renderFallbackBehavior() {
-    this.canAutoPlay = false
+    this.setFallbackImage()
     this.container.classList.add('mobile')
     this.logger('added mobile')
   }
