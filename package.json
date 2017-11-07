@@ -12,6 +12,8 @@
     "lint": "eslint src",
     "build": "npm run lint && babel src --out-dir dist",
     "prepublish": "npm run build",
+    "test": "webpack ./dist/index.js ./test/test.js --output-filename ./test/testBundle.js && echo +++ open ./test/testResults.html for test results",
+    "test:watch": "webpack --watch ./dist/index.js ./test/test.js --output-filename ./test/testBundle.js && echo +++ open ./test/testResults.html for test results",
     "watch": "npm run lint && babel src --watch --out-dir dist"
   },
   "devDependencies": {
@@ -22,9 +24,12 @@
     "babel-plugin-syntax-dynamic-import": "^6.18.0",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
     "babel-preset-env": "^1.6.1",
+    "chai": "^4.1.2",
     "eslint": "^4.0.0",
     "eslint-config-squarespace": "^1.0.1",
-    "eslint-plugin-async-await": "0.0.0"
+    "eslint-plugin-async-await": "0.0.0",
+    "mocha": "^4.0.1",
+    "webpack": "^3.8.1"
   },
   "dependencies": {
     "@squarespace/polyfills": "1.0.0",

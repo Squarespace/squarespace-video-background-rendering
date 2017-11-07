@@ -108,4 +108,43 @@ const validatedImage = (img) => {
   return isValid
 }
 
-export { getStartTime, getVideoID, getVideoSource, validatedImage }
+/**
+ * @method findPlayerAspectRatio Determine the aspect ratio of the actual video itself,
+ *    which may be different than the IFRAME returned by the video provider.
+ * @return {Number} A ratio of width divided by height.
+ */
+const findPlayerAspectRatio = (container, player, videoSource) => {
+  let w
+  let h
+  if (videoSource === 'youtube' && player) {
+    // The YouTube API seemingly does not expose the actual width and height dimensions
+    // of the video itself. The video's dimensions and ratio may be completely different
+    // than the IFRAME's. This hack finds those values inside some private objects.
+    // Since this is not part of the public API, the dimensions will fall back to the
+    // container width and height in case YouTube changes the internals unexpectedly.
+    for (let p in player) {
+      let prop = player[p]
+      if (typeof prop === 'object' && prop.width && prop.height) {
+        w = prop.width
+        h = prop.height
+        break
+      }
+    }
+  } else if (videoSource === 'vimeo' && player) {
+    if (player.dimensions) {
+      w = player.dimensions.width
+      h = player.dimensions.height
+    } else if (player.iframe) {
+      w = player.iframe.clientWidth
+      h = player.iframe.clientHeight
+    }
+  }
+  if (!w || !h) {
+    w = container.clientWidth
+    h = container.clientHeight
+    console.warn('Video player dimensions not found.')
+  }
+  return parseInt(w, 10) / parseInt(h, 10)
+}
+
+export { findPlayerAspectRatio, getStartTime, getVideoID, getVideoSource, validatedImage }

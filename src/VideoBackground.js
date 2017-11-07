@@ -5,7 +5,7 @@ import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtu
 import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'
 import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
-import { getStartTime, getVideoID, getVideoSource, validatedImage } from './utils/utils'
+import { findPlayerAspectRatio, getStartTime, getVideoID, getVideoSource, validatedImage } from './utils/utils'
 
 const videoSourceModules = {
   vimeo: {
@@ -128,13 +128,18 @@ class VideoBackground {
    */
   setFallbackImage() {
     const customFallbackImage = this.customFallbackImage
-    if (!customFallbackImage || !this.windowContext.ImageLoader || (this.browserCanAutoPlay && this.videoCanAutoPlay)) {
+    if (!customFallbackImage || (this.browserCanAutoPlay && this.videoCanAutoPlay)) {
       return
     }
     customFallbackImage.addEventListener('load', () => {
       customFallbackImage.classList.add('loaded')
     }, { once: true })
-    this.windowContext.ImageLoader.load(customFallbackImage, { load: true })
+    if (this.windowContext.ImageLoader) {
+      this.windowContext.ImageLoader.load(customFallbackImage, { load: true })
+      return
+    }
+    // Forcing a load event on the image
+    customFallbackImage.src = customFallbackImage.src
   }
 
   /**
@@ -187,7 +192,7 @@ class VideoBackground {
       speed: this.playbackSpeed,
       readyCallback: (player, data) => {
         this.player.iframe.classList.add('background-video')
-        this.videoAspectRatio = this.findPlayerAspectRatio()
+        this.videoAspectRatio = findPlayerAspectRatio(this.container, this.player, this.videoSource)
         this.syncPlayer()
         const readyEvent = new CustomEvent('ready')
         this.container.dispatchEvent(readyEvent)
@@ -372,46 +377,6 @@ class VideoBackground {
    */
   getFilterStyle(filter, strength) {
     return `${filter}(${FILTER_PROPERTIES[filter].modifier(strength) + FILTER_PROPERTIES[filter].unit})`
-  }
-
-  /**
-   * @method findPlayerAspectRatio Determine the aspect ratio of the actual video itself,
-   *    which may be different than the IFRAME returned by the video provider.
-   * @return {Number} A ratio of width divided by height.
-   */
-  findPlayerAspectRatio() {
-    let w
-    let h
-    const player = this.player
-    if (this.videoSource === 'youtube' && player) {
-      // The YouTube API seemingly does not expose the actual width and height dimensions
-      // of the video itself. The video's dimensions and ratio may be completely different
-      // than the IFRAME's. This hack finds those values inside some private objects.
-      // Since this is not part of the public API, the dimensions will fall back to the
-      // container width and height in case YouTube changes the internals unexpectedly.
-      for (let p in player) {
-        let prop = player[p]
-        if (typeof prop === 'object' && prop.width && prop.height) {
-          w = prop.width
-          h = prop.height
-          break
-        }
-      }
-    } else if (this.videoSource === 'vimeo' && player) {
-      if (player.dimensions) {
-        w = player.dimensions.width
-        h = player.dimensions.height
-      } else if (player.iframe) {
-        w = player.iframe.clientWidth
-        h = player.iframe.clientHeight
-      }
-    }
-    if (!w || !h) {
-      w = this.container.clientWidth
-      h = this.container.clientHeight
-      console.warn('Video player dimensions not found.')
-    }
-    return parseInt(w, 10) / parseInt(h, 10)
   }
 
   /**
