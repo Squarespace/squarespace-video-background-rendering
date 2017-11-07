@@ -6,23 +6,29 @@ import { findPlayerAspectRatio } from '../dist/utils/utils'
 describe('Video Background: YouTube default', () => {
   let container = document.querySelector('.container')
   let videobg
-  before(() => {
-    videobg = new VideoBackground({
+  before(async () => {
+    videobg = await new VideoBackground({
       container
     })
   })
 
   describe('videobg instanceof VideoBackground', () => {
-    it('should be true', () => {
-      const result = videobg instanceof VideoBackground
+    it('should be true', async () => {
+      const result = await videobg instanceof VideoBackground
       expect(result).to.equal(true)
     })
   })
 
   describe('Player aspect ratio', () => {
-    it('should be about 1.778', () => {
-      const result = findPlayerAspectRatio(videobg.container, videobg.player, videobg.source).toFixed(3)
-      expect(result).to.equal('1.778')
+    it('should be about 1.778', async (done) => {
+      await container.addEventListener('ready', () => {
+        try {
+          const result = videobg.videoAspectRatio
+          expect(result).to.be.within(1.777, 1.8)
+        } catch (e) {
+          console.warn(e)
+        }
+      })
     })
   })
 

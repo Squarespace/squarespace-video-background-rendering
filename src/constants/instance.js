@@ -4,7 +4,7 @@ const DEBUG = {
 }
 
 const DEFAULT_PROPERTY_VALUES = {
-  container: '.background-wrapper',
+  container: 'body',
   url: 'https://youtu.be/xkEmYQvJ_68',
   source: 'youtube',
   fitMode: 'fill',
