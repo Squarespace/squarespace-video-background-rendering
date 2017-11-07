@@ -1,6 +1,6 @@
 import merge from 'lodash.merge'
 import testBrowserAutoplaySupport from './utils/videoAutoplayTest'
-import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo'
+import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo-api'
 import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube'
 import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'

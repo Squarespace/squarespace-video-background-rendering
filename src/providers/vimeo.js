@@ -52,8 +52,6 @@ const initializeVimeoPlayer = (config) => {
       return;
     }
 
-    config.instance.logger(player.dimensions);
-
     // Only required for Vimeo Basic videos, or video URLs with a start time hash.
     // Plus and Pro utilize `background=1` URL parameter.
     // See https://vimeo.com/forums/topic:278001
