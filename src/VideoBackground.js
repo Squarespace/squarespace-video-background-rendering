@@ -1,5 +1,5 @@
 import merge from 'lodash.merge'
-import testBrowserAutoplaySupport from './utils/videoAutoplayTest'
+import testBrowserAutoplaySupport from './utils/browserAutoplayTest'
 import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo-api'
 import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube'
 import { DEFAULT_PROPERTY_VALUES } from './constants/instance'

@@ -12,7 +12,7 @@ const initializeVimeoAPI = () => {
 };
 
 /**
- * Initialize the player and bind player events with a postMessage handler.
+ * Initialize the player and bind player events.
  */
 const initializeVimeoPlayer = (config) => {
   let playerElement = config.container.querySelector('#player');
@@ -24,12 +24,15 @@ const initializeVimeoPlayer = (config) => {
 
   const player = new Player(playerElement, {
     id: config.videoId,
-    width: 640,
-    loop: true
+    width: playerElement.offsetWidth,
+    loop: true,
+    background: true
   })
 
+  player.dimensions = {}
+
   const syncAndStartPlayback = () => {
-    if (!player.width || !player.height || !player.duration) {
+    if (!player.dimensions.width || !player.dimensions.height || !player.duration) {
       return
     }
 
@@ -45,12 +48,16 @@ const initializeVimeoPlayer = (config) => {
 
   player.ready()
     .then(data => {
+      data = data ? data : {}
+      data.event = 'ready'
+      config.stateChangeCallback('buffering', data)
+
       player.getVideoWidth().then(function(width) {
-        player.width = width
+        player.dimensions.width = width
         syncAndStartPlayback(player)
       })
       player.getVideoHeight().then(function(height) {
-        player.height = height
+        player.dimensions.height = height
         syncAndStartPlayback(player)
       })
       player.getDuration().then(function(duration) {
@@ -62,15 +69,18 @@ const initializeVimeoPlayer = (config) => {
       })
     })
 
+  player.on('timeupdate', data => {
+    data.event = 'timeupdate'
+    config.stateChangeCallback('playing', data)
+  })
+
   player.on('progress', data => {
+    data.event = 'progress'
     config.stateChangeCallback('playing', data)
   })
 
   player.on('play', data => {
-    config.stateChangeCallback('playing', data)
-  })
-
-  player.on('timeUpdate', data => {
+    data.event = 'play'
     config.stateChangeCallback('playing', data)
   })
 
