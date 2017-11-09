@@ -79,7 +79,7 @@ class VideoBackground {
   bindUI() {
     const resizeHandler = () => {
       this.windowContext.requestAnimationFrame(() => {
-        this.scaleMedia()
+        this.scaleVideo()
       })
     }
     this.events.push({
@@ -270,18 +270,18 @@ class VideoBackground {
   syncPlayer() {
     this.setDisplayEffects()
     this.setSpeed()
-    this.scaleMedia()
+    this.scaleVideo()
   }
 
   /**
-   * @method scaleMedia The IFRAME will be the entire width and height of its container, but the video
+   * @method scaleVideo The IFRAME will be the entire width and height of its container, but the video
    * may be a completely different size and ratio. Scale up the IFRAME so the inner video
    * behaves in the proper `fitMode`, with optional additional scaling to zoom in. Also allow
    * ImageLoader to reload the custom fallback image, if appropriate.
    * @param {Number} [scaleValue] A multipiler used to increase the scaled size of the media.
    * @return {undefined}
    */
-  scaleMedia(scaleValue) {
+  scaleVideo(scaleValue) {
     this.setFallbackImage()
 
     const playerIframe = this.player.iframe
