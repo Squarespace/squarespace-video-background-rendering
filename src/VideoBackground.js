@@ -97,6 +97,7 @@ class VideoBackground {
    */
   setInstanceProperties(props = {}) {
     props = merge({}, DEFAULT_PROPERTY_VALUES, props)
+
     if (props.container.nodeType === 1) {
       this.container = props.container
     } else if (typeof props.container === 'string') {
@@ -106,6 +107,7 @@ class VideoBackground {
       console.error('Container ' + props.container + ' not found')
       return false
     }
+
     this.videoSource = getVideoSource(props.url)
     this.videoId = getVideoID(props.url, this.videoSource)
     this.customFallbackImage = validatedImage(props.customFallbackImage)
@@ -138,7 +140,7 @@ class VideoBackground {
       this.windowContext.ImageLoader.load(customFallbackImage, { load: true })
       return
     }
-    // Forcing a load event on the image
+    // Forcing a load event on the image when ImageLoader is not present
     customFallbackImage.src = customFallbackImage.src
   }
 
@@ -196,15 +198,17 @@ class VideoBackground {
         this.syncPlayer()
         const readyEvent = new CustomEvent('ready')
         this.container.dispatchEvent(readyEvent)
-        document.body.classList.add('ready')
       },
       stateChangeCallback: (state, data) => {
-        if (state === 'buffering') {
+        switch (state) {
+        case 'buffering':
           this.testVideoEmbedAutoplay()
-        } else if (state === 'playing') {
+          break
+        case 'playing':
           if (this.player.playTimeout !== null || !this.videoCanAutoPlay) {
             this.testVideoEmbedAutoplay(true)
           }
+          break
         }
         if (data) {
           this.logger(data)

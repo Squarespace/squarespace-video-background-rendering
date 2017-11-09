@@ -1,5 +1,4 @@
-import { DEFAULT_PROPERTY_VALUES } from '../constants/instance.js'
-import { YOUTUBE_REGEX, VIMEO_REGEX } from '../constants/instance.js'
+import { DEFAULT_PROPERTY_VALUES, YOUTUBE_REGEX, VIMEO_REGEX } from '../constants/instance.js'
 import parseUrl from 'url-parse'
 
 /**

@@ -17,6 +17,7 @@ const initializeVimeoAPI = () => {
  */
 const initializeVimeoPlayer = (config) => {
   let playerElement = getPlayerElement(config.container)
+  playerElement.setAttribute('data-vimeo-background', 'true')
 
   const player = new Player(playerElement, {
     id: config.videoId,
