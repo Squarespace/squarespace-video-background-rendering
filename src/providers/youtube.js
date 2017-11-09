@@ -1,3 +1,5 @@
+import { getPlayerElement } from '../utils/utils'
+
 /**
  * Set up the YouTube script include if it's not present
  */
@@ -67,12 +69,7 @@ const onYouTubePlayerStateChange = (event, startTime, win, playbackSpeed = 1) =>
  * Initialize the player and bind player events.
  */
 const initializeYouTubePlayer = (config) => {
-  let playerElement = config.container.querySelector('#player');
-  if (!playerElement) {
-    playerElement = document.createElement('div');
-    playerElement.id = 'player';
-    config.container.appendChild(playerElement);
-  }
+  let playerElement = getPlayerElement(config.container)
 
   const makePlayer = () => {
     return new config.win.YT.Player(playerElement, {

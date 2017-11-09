@@ -147,4 +147,17 @@ const findPlayerAspectRatio = (container, player, videoSource) => {
   return parseInt(w, 10) / parseInt(h, 10)
 }
 
-export { findPlayerAspectRatio, getStartTime, getVideoID, getVideoSource, validatedImage }
+const getPlayerElement = (container) => {
+  let playerElement = container.querySelector('#player');
+  if (!playerElement) {
+    playerElement = document.createElement('div');
+    playerElement.id = 'player';
+    container.appendChild(playerElement);
+  }
+
+  playerElement.setAttribute('style', 'position: absolute; top: 0; bottom: 0; left: 0; right: 0;')
+
+  return playerElement
+}
+
+export { findPlayerAspectRatio, getPlayerElement, getStartTime, getVideoID, getVideoSource, validatedImage }

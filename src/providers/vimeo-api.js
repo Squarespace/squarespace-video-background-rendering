@@ -1,26 +1,22 @@
-import Player from '@vimeo/player';
+import Player from '@vimeo/player'
+import { getPlayerElement } from '../utils/utils'
 
 /**
  * Call the Vimeo API per their guidelines.
  */
 const initializeVimeoAPI = () => {
-  // No external API call is necessary; preserved for parity with YouTube and
+  // No external API call is necessary, preserved for parity with YouTube and
   // potential additional integrations.
   return new Promise((resolve, reject) => {
-    resolve('no api needed');
-  });
-};
+    resolve('no api needed')
+  })
+}
 
 /**
  * Initialize the player and bind player events.
  */
 const initializeVimeoPlayer = (config) => {
-  let playerElement = config.container.querySelector('#player');
-  if (!playerElement) {
-    playerElement = document.createElement('div');
-    playerElement.id = 'player';
-    config.container.appendChild(playerElement);
-  }
+  let playerElement = getPlayerElement(config.container)
 
   const player = new Player(playerElement, {
     id: config.videoId,
@@ -63,7 +59,7 @@ const initializeVimeoPlayer = (config) => {
       player.getDuration().then(function(duration) {
         player.duration = duration
         if (config.startTime >= player.duration) {
-          config.startTime = 0;
+          config.startTime = 0
         }
         syncAndStartPlayback(player)
       })
@@ -92,4 +88,4 @@ const initializeVimeoPlayer = (config) => {
 export {
   initializeVimeoAPI,
   initializeVimeoPlayer
-};
+}
