@@ -1,5 +1,53 @@
 import { DEFAULT_PROPERTY_VALUES, YOUTUBE_REGEX, VIMEO_REGEX } from '../constants/instance.js'
 import parseUrl from 'url-parse'
+import get from 'lodash.get'
+
+const getYouTubeDimensions = player => {
+  // The YouTube API seemingly does not expose the actual width and height dimensions
+  // of the video itself. The video's dimensions and ratio may be completely different
+  // than the IFRAME's. This hack finds those values inside some private objects.
+  // Since this is not part of the public API, the dimensions will fall back to the
+  // container width and height in case YouTube changes the internals unexpectedly.
+  let w
+  let h
+  for (let p in player) {
+    let prop = player[p]
+    if (typeof prop === 'object' && prop.width && prop.height) {
+      w = prop.width
+      h = prop.height
+      break
+    }
+  }
+  return { w, h }
+}
+
+const getVimeoDimensions = player => {
+  let w
+  let h
+  if (player.dimensions) {
+    w = player.dimensions.width
+    h = player.dimensions.height
+  } else if (player.iframe) {
+    w = player.iframe.clientWidth
+    h = player.iframe.clientHeight
+  }
+  return { w, h }
+}
+
+const providerUtils = {
+  youtube: {
+    parsePath: 'query.t',
+    timeRegex: /[hms]/,
+    idRegex: YOUTUBE_REGEX,
+    getDimensions: getYouTubeDimensions
+  },
+  vimeo: {
+    parsePath: null,
+    timeRegex: /[#t=s]/,
+    idRegex: VIMEO_REGEX,
+    getDimensions: getVimeoDimensions
+  }
+}
 
 /**
  * @method getTimeParameter YouTube and Vimeo have optional URL formats to allow
@@ -7,18 +55,7 @@ import parseUrl from 'url-parse'
  * @return {String or false} The appropriate time parameter or false.
  */
 const getTimeParameter = (parsedUrl, source) => {
-  if ((source === 'youtube' && (!parsedUrl.query || !parsedUrl.query.t)) ||
-    (source === 'vimeo' && (!parsedUrl.hash))
-  ) {
-    return false
-  }
-  let timeParam
-  if (source === 'youtube') {
-    timeParam = parsedUrl.query.t
-  } else if (source === 'vimeo') {
-    timeParam = parsedUrl.hash
-  }
-  return timeParam
+  return providerUtils[source].parsePath ? get(parsedUrl, providerUtils[source].parsePath) : null
 }
 
 /**
@@ -28,23 +65,12 @@ const getTimeParameter = (parsedUrl, source) => {
  */
 const getStartTime = (url, source) => {
   const parsedUrl = new parseUrl(url, true)
-  let timeParam = getTimeParameter(parsedUrl)
+  let timeParam = getTimeParameter(parsedUrl, source)
   if (!timeParam) {
-    return false
+    return
   }
 
-  const timeRegexYoutube = /[hms]/
-  const timeRegexVimeo = /[#t=s]/
-
-  let match
-  switch (source) {
-  case 'youtube' :
-    match = timeParam.split(timeRegexYoutube).filter(Boolean)
-    break
-  case 'vimeo' :
-    match = timeParam.split(timeRegexVimeo).filter(Boolean)
-    break
-  }
+  const match = timeParam.split(providerUtils[source].timeRegex).filter(Boolean)
   let s = parseInt(match.pop(), 10) || 0
   let m = parseInt(match.pop(), 10) * 60 || 0
   let h = parseInt(match.pop(), 10) * 3600 || 0
@@ -77,12 +103,7 @@ const getVideoSource = (url = DEFAULT_PROPERTY_VALUES.url) => {
  * @return {String} Video ID
  */
 const getVideoID = (url = DEFAULT_PROPERTY_VALUES.url, source = null) => {
-  let match
-  if (source === 'youtube') {
-    match = url.match(YOUTUBE_REGEX)
-  } else if (source === 'vimeo') {
-    match = url.match(VIMEO_REGEX)
-  }
+  let match = url.match(providerUtils[source].idRegex)
   if (match && match[2].length) {
     return match[2]
   }
@@ -107,25 +128,6 @@ const validatedImage = (img) => {
   return isValid
 }
 
-const getYouTubeDimensions = (player) => {
-  // The YouTube API seemingly does not expose the actual width and height dimensions
-  // of the video itself. The video's dimensions and ratio may be completely different
-  // than the IFRAME's. This hack finds those values inside some private objects.
-  // Since this is not part of the public API, the dimensions will fall back to the
-  // container width and height in case YouTube changes the internals unexpectedly.
-  let w
-  let h
-  for (let p in player) {
-    let prop = player[p]
-    if (typeof prop === 'object' && prop.width && prop.height) {
-      w = prop.width
-      h = prop.height
-      break
-    }
-  }
-  return { w, h }
-}
-
 /**
  * @method findPlayerAspectRatio Determine the aspect ratio of the actual video itself,
  *    which may be different than the IFRAME returned by the video provider.
@@ -134,18 +136,10 @@ const getYouTubeDimensions = (player) => {
 const findPlayerAspectRatio = (container, player, videoSource) => {
   let w
   let h
-  if (videoSource === 'youtube' && player) {
-    const dimensions = getYouTubeDimensions(player)
+  if (player) {
+    const dimensions = providerUtils[videoSource].getDimensions(player)
     w = dimensions.w
     h = dimensions.h
-  } else if (videoSource === 'vimeo' && player) {
-    if (player.dimensions) {
-      w = player.dimensions.width
-      h = player.dimensions.height
-    } else if (player.iframe) {
-      w = player.iframe.clientWidth
-      h = player.iframe.clientHeight
-    }
   }
   if (!w || !h) {
     w = container.clientWidth

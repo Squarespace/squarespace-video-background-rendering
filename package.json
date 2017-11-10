@@ -35,6 +35,7 @@
     "@squarespace/polyfills": "1.0.0",
     "@vimeo/player": "^2.2.0",
     "babel-runtime": "^6.9.0",
+    "lodash.get": "^4.4.2",
     "lodash.merge": "^4.6.0",
     "url-parse": "^1.1.1",
     "xhr": "^2.2.1"
