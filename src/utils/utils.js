@@ -2,12 +2,18 @@ import { DEFAULT_PROPERTY_VALUES, YOUTUBE_REGEX, VIMEO_REGEX } from '../constant
 import parseUrl from 'url-parse'
 import get from 'lodash.get'
 
+/**
+ * The YouTube API seemingly does not expose the actual width and height dimensions
+ * of the video itself. The video's dimensions and ratio may be completely different
+ * than the IFRAME's. This hack finds those values inside some private objects.
+ * Since this is not part of the public API, the dimensions will fall back to the
+ * container width and height in case YouTube changes the internals unexpectedly.
+ *
+ * @method getYouTubeDimensions Get the dimensions of the video itself
+ * @param {Object} Player
+ * @return {Object} The width and height as integers or undefined
+ */
 const getYouTubeDimensions = player => {
-  // The YouTube API seemingly does not expose the actual width and height dimensions
-  // of the video itself. The video's dimensions and ratio may be completely different
-  // than the IFRAME's. This hack finds those values inside some private objects.
-  // Since this is not part of the public API, the dimensions will fall back to the
-  // container width and height in case YouTube changes the internals unexpectedly.
   let w
   let h
   for (let p in player) {
@@ -21,6 +27,11 @@ const getYouTubeDimensions = player => {
   return { w, h }
 }
 
+/**
+ * @method getVimeoDimensions Get the dimensions of the video itself
+ * @param {Object} Player
+ * @return {Object} The width and height as integers or undefined
+ */
 const getVimeoDimensions = player => {
   let w
   let h
