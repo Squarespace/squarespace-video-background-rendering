@@ -15,12 +15,14 @@ const initializeVimeoAPI = () => {
 /**
  * Initialize the player and bind player events.
  */
-const initializeVimeoPlayer = (config) => {
-  let playerElement = getPlayerElement(config.container)
+const initializeVimeoPlayer = ({
+  container, videoId, readyCallback, stateChangeCallback
+}) => {
+  let playerElement = getPlayerElement(container)
   playerElement.setAttribute('data-vimeo-background', 'true')
 
   const player = new Player(playerElement, {
-    id: config.videoId,
+    id: videoId,
     width: playerElement.offsetWidth,
     loop: true,
     background: true
@@ -36,49 +38,47 @@ const initializeVimeoPlayer = (config) => {
     player.iframe = player.element
     player.setVolume(0)
     player.play()
-    config.readyCallback(player)
+    readyCallback(player)
   }
 
   player.destroy = () => {
-    config.container.removeChild(playerElement)
+    container.removeChild(playerElement)
   }
 
   player.ready()
     .then(data => {
       data = data ? data : {}
       data.event = 'ready'
-      config.stateChangeCallback('buffering', data)
+      stateChangeCallback('buffering', data)
 
-      player.getVideoWidth().then(function(width) {
-        player.dimensions.width = width
-        syncAndStartPlayback(player)
-      })
-      player.getVideoHeight().then(function(height) {
-        player.dimensions.height = height
-        syncAndStartPlayback(player)
-      })
-      player.getDuration().then(function(duration) {
-        player.duration = duration
-        if (config.startTime >= player.duration) {
-          config.startTime = 0
+      Promise.all([
+        player.getVideoWidth(),
+        player.getVideoHeight(),
+        player.getDuration()
+      ]).then(values => {
+        player.dimensions = {
+          width: values[0],
+          height: values[1]
         }
-        syncAndStartPlayback(player)
+
+        player.duration = values[2]
+        syncAndStartPlayback()
       })
     })
 
   player.on('timeupdate', data => {
     data.event = 'timeupdate'
-    config.stateChangeCallback('playing', data)
+    stateChangeCallback('playing', data)
   })
 
   player.on('progress', data => {
     data.event = 'progress'
-    config.stateChangeCallback('playing', data)
+    stateChangeCallback('playing', data)
   })
 
   player.on('play', data => {
     data.event = 'play'
-    config.stateChangeCallback('playing', data)
+    stateChangeCallback('playing', data)
   })
 
   return new Promise((resolve, reject) => {

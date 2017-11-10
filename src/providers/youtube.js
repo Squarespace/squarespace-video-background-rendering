@@ -40,9 +40,9 @@ const onYouTubePlayerReady = (event, startTime) => {
 /**
  * YouTube event handler. Determine whether or not to loop the video.
  */
-const onYouTubePlayerStateChange = (event, startTime, win, playbackSpeed = 1) => {
+const onYouTubePlayerStateChange = (event, startTime, win, speed = 1) => {
   const player = event.target;
-  const duration = (player.getDuration() - startTime) / playbackSpeed;
+  const duration = (player.getDuration() - startTime) / speed;
 
   const doLoop = () => {
     if ((player.getCurrentTime() + 0.1) >= player.getDuration()) {
@@ -68,14 +68,14 @@ const onYouTubePlayerStateChange = (event, startTime, win, playbackSpeed = 1) =>
 /**
  * Initialize the player and bind player events.
  */
-const initializeYouTubePlayer = (config) => {
-  let playerElement = getPlayerElement(config.container)
+const initializeYouTubePlayer = ({
+  container, win, videoId, startTime, speed, readyCallback, stateChangeCallback
+}) => {
+  let playerElement = getPlayerElement(container)
 
   const makePlayer = () => {
-    return new config.win.YT.Player(playerElement, {
-      height: '315',
-      width: '560',
-      videoId: config.videoId,
+    return new win.YT.Player(playerElement, {
+      videoId: videoId,
       playerVars: {
         'autohide': 1,
         'autoplay': 0,
@@ -91,12 +91,12 @@ const initializeYouTubePlayer = (config) => {
       },
       events: {
         onReady: function(event) {
-          onYouTubePlayerReady(event, config.startTime);
-          config.readyCallback(event.target);
+          onYouTubePlayerReady(event, startTime);
+          readyCallback(event.target);
         },
         onStateChange: function(event) {
-          const state = onYouTubePlayerStateChange(event, config.startTime, config.win, config.playbackSpeed);
-          config.stateChangeCallback(state, state);
+          const state = onYouTubePlayerStateChange(event, startTime, win, speed);
+          stateChangeCallback(state, state);
         }
       }
     });
@@ -104,7 +104,7 @@ const initializeYouTubePlayer = (config) => {
 
   return new Promise((resolve, reject) => {
     const checkAPILoaded = () => {
-      if (config.win.YT.loaded === 1) {
+      if (win.YT.loaded === 1) {
         resolve(makePlayer());
       } else {
         setTimeout(checkAPILoaded, 100);

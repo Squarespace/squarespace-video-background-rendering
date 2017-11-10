@@ -115,7 +115,7 @@ class VideoBackground {
     this.filterStrength = props.filterStrength
     this.fitMode = props.fitMode
     this.scaleFactor = props.scaleFactor
-    this.playbackSpeed = parseFloat(props.playbackSpeed) === 0.0 ? 1 : parseFloat(props.playbackSpeed)
+    this.playbackSpeed = parseFloat(props.playbackSpeed) < 0.5 ? 1 : parseFloat(props.playbackSpeed)
     this.timeCode = {
       start: getStartTime(props.url, this.videoSource) || props.timeCode.start,
       end: props.timeCode.end
@@ -310,21 +310,17 @@ class VideoBackground {
       // at the same width, the video is taller than the window
       pWidth = containerWidth * scale
       pHeight = containerWidth * scale / this.videoAspectRatio
-      playerIframe.style.width = pWidth + 'px'
-      playerIframe.style.height = pHeight + 'px'
     } else if (this.videoAspectRatio > containerRatio) {
       // at the same width, the video is shorter than the window
       pWidth = containerHeight * scale * this.videoAspectRatio
       pHeight = containerHeight * scale
-      playerIframe.style.width = pWidth + 'px'
-      playerIframe.style.height = pHeight + 'px'
     } else {
       // the window and video ratios match
       pWidth = containerWidth * scale
       pHeight = containerHeight * scale
-      playerIframe.style.width = pWidth + 'px'
-      playerIframe.style.height = pHeight + 'px'
     }
+    playerIframe.style.width = pWidth + 'px'
+    playerIframe.style.height = pHeight + 'px'
     playerIframe.style.left = 0 - ((pWidth - containerWidth) / 2) + 'px'
     playerIframe.style.top = 0 - ((pHeight - containerHeight) / 2) + 'px'
   }
