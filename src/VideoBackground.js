@@ -1,6 +1,6 @@
 import merge from 'lodash.merge'
 import testBrowserAutoplaySupport from './utils/browserAutoplayTest'
-import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo-api'
+import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo'
 import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube'
 import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'
@@ -233,6 +233,10 @@ class VideoBackground {
   testVideoEmbedAutoplay(success = undefined) {
     if (success === undefined) {
       this.logger('test video autoplay: begin')
+      if (this.player.playTimeout) {
+        clearTimeout(this.player.playTimeout)
+        this.player.playTimeout = null
+      }
       this.player.playTimeout = setTimeout(() => {
         this.testVideoEmbedAutoplay(false)
       }, 2500)
@@ -258,7 +262,7 @@ class VideoBackground {
   }
 
   /**
-    * @method testVideoEmbedAutoplay Initialize mobile fallback behavior
+    * @method renderFallbackBehavior Initialize mobile fallback behavior
     * @return {undefined}
     */
   renderFallbackBehavior() {
@@ -332,7 +336,9 @@ class VideoBackground {
    */
   setSpeed(speedValue) {
     this.playbackSpeed = parseFloat(this.playbackSpeed)
-    this.player.setPlaybackRate(this.playbackSpeed)
+    if (this.player.setPlaybackRate) {
+      this.player.setPlaybackRate(this.playbackSpeed)
+    }
   }
 
   /**
