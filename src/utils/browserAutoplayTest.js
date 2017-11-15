@@ -78,7 +78,7 @@ const VideoAutoplayTest = () => {
       failsafeTimer = setTimeout(() => {
         elem.remove();
         reject('no autoplay: unsure');
-      }, 10000);
+      }, 3000);
     });
 
     elem.addEventListener('canplay', () => {
