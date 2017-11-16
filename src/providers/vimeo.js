@@ -62,8 +62,7 @@ const initializeVimeoPlayer = ({
     // See https://vimeo.com/forums/topic:278001
     postMessageManager('setVolume', '0');
     postMessageManager('setLoop', 'true');
-    postMessageManager('seekTo', startTime);
-    postMessageManager('play');
+    postMessageManager('seekTo', startTime); // `seekTo` handles playback as well
     postMessageManager('addEventListener', 'playProgress');
 
     readyCallback(player);
@@ -71,12 +70,12 @@ const initializeVimeoPlayer = ({
 
   const onReady = () => {
     if (!player.dimensions) {
-      stateChangeCallback('buffering');
-
       player.dimensions = {};
       postMessageManager('getDuration');
       postMessageManager('getVideoHeight');
       postMessageManager('getVideoWidth');
+
+      stateChangeCallback('buffering');
     }
   };
 
