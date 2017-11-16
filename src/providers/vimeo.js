@@ -1,4 +1,5 @@
 import { getPlayerElement } from '../utils/utils'
+import { TIMEOUT as timeoutDuration } from '../constants/instance'
 
 /**
  * Call the Vimeo API per their guidelines.
@@ -38,8 +39,9 @@ const postMessageManager = (action, value) => {
  * Initialize the player and bind player events with a postMessage handler.
  */
 const initializeVimeoPlayer = ({
-  win, container, videoId, startTime, readyCallback, stateChangeCallback
+  win, instance, container, videoId, startTime, readyCallback, stateChangeCallback
 }) => {
+  const logger = instance.logger || function() {}
   playerIframe = win.document.createElement('iframe');
   playerIframe.id = 'vimeoplayer';
   const playerConfig = '&background=1';
@@ -52,10 +54,21 @@ const initializeVimeoPlayer = ({
     setPlaybackRate: () => {}
   };
 
-  const syncAndStartPlayback = () => {
-    if (!player.dimensions.width || !player.dimensions.height || !player.duration) {
+  let retryTimer = null
+  const syncAndStartPlayback = (isRetrying = false) => {
+    if (!isRetrying && (!player.dimensions.width || !player.dimensions.height || !player.duration)) {
       return;
     }
+
+    if (isRetrying) {
+      postMessageManager('getDuration');
+      postMessageManager('getVideoHeight');
+      postMessageManager('getVideoWidth');
+    }
+
+    player.dimensions.width = player.dimensions.width || player.iframe.parentNode.offsetWidth
+    player.dimensions.height = player.dimensions.height || player.iframe.parentNode.offsetHeight
+    player.duration = player.duration || 10
 
     // Only required for Vimeo Basic videos, or video URLs with a start time hash.
     // Plus and Pro utilize `background=1` URL parameter.
@@ -76,6 +89,10 @@ const initializeVimeoPlayer = ({
       postMessageManager('getVideoWidth');
 
       stateChangeCallback('buffering');
+      retryTimer = setTimeout(() => {
+        logger.call(instance, 'retrying')
+        syncAndStartPlayback(true)
+      }, timeoutDuration * 0.75)
     }
   };
 
@@ -98,6 +115,10 @@ const initializeVimeoPlayer = ({
 
     case 'playProgress':
     case 'timeupdate':
+      if (retryTimer) {
+        clearTimeout(retryTimer)
+        retryTimer = null
+      }
       stateChangeCallback('playing', data);
       postMessageManager('setVolume', '0');
 
@@ -109,14 +130,17 @@ const initializeVimeoPlayer = ({
 
     switch (data.method) {
     case 'getVideoHeight':
+      logger.call(instance, data.method)
       player.dimensions.height = data.value;
       syncAndStartPlayback();
       break;
     case 'getVideoWidth':
+      logger.call(instance, data.method)
       player.dimensions.width = data.value;
       syncAndStartPlayback();
       break;
     case 'getDuration':
+      logger.call(instance, data.method)
       player.duration = data.value;
       if (startTime >= player.duration) {
         startTime = 0;

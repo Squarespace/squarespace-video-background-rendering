@@ -16,6 +16,8 @@ const DEFAULT_PROPERTY_VALUES = {
   DEBUG
 }
 
+const TIMEOUT = 2500
+
 // eslint-disable-next-line no-useless-escape
 const YOUTUBE_REGEX = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]{11}).*/
 // eslint-disable-next-line no-useless-escape
@@ -24,6 +26,7 @@ const VIMEO_REGEX = /^.*(vimeo\.com\/)([0-9]{7,}(#t\=.*s)?)/
 export {
   DEBUG,
   DEFAULT_PROPERTY_VALUES,
+  TIMEOUT,
   YOUTUBE_REGEX,
   VIMEO_REGEX
 }

@@ -5,6 +5,7 @@ import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtu
 import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'
 import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
+import { TIMEOUT as timeoutDuration } from './constants/instance'
 import { findPlayerAspectRatio, getStartTime, getVideoID, getVideoSource, validatedImage } from './utils/utils'
 
 const videoSourceModules = {
@@ -210,6 +211,7 @@ class VideoBackground {
           }
           break
         }
+        this.logger(state)
         if (data) {
           this.logger(data)
         }
@@ -239,7 +241,7 @@ class VideoBackground {
       }
       this.player.playTimeout = setTimeout(() => {
         this.testVideoEmbedAutoplay(false)
-      }, 2500)
+      }, timeoutDuration)
     }
     if (success === true) {
       clearTimeout(this.player.playTimeout)
