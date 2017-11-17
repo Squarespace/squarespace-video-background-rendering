@@ -65,8 +65,8 @@ class VideoBackground {
 
     if (this.player && typeof this.player.destroy === 'function') {
       this.player.iframe.classList.remove('ready')
-      clearTimeout(this.player.playTimeout)
-      this.player.playTimeout = null
+      clearTimeout(this.playTimeout)
+      this.playTimeout = null
       this.player.destroy()
       this.player = {}
     }
@@ -206,12 +206,14 @@ class VideoBackground {
           this.testVideoEmbedAutoplay()
           break
         case 'playing':
-          if (this.player.playTimeout !== null || !this.videoCanAutoPlay) {
+          if (this.playTimeout !== null || !this.videoCanAutoPlay) {
             this.testVideoEmbedAutoplay(true)
           }
           break
         }
-        this.logger(state)
+        if (state) {
+          this.logger(state)
+        }
         if (data) {
           this.logger(data)
         }
@@ -220,6 +222,9 @@ class VideoBackground {
 
     playerPromise.then((player) => {
       this.player = player
+    }, reason => {
+      this.logger(reason)
+      this.testVideoEmbedAutoplay(false)
     })
   }
 
@@ -235,18 +240,18 @@ class VideoBackground {
   testVideoEmbedAutoplay(success = undefined) {
     if (success === undefined) {
       this.logger('test video autoplay: begin')
-      if (this.player.playTimeout) {
-        clearTimeout(this.player.playTimeout)
-        this.player.playTimeout = null
+      if (this.playTimeout) {
+        clearTimeout(this.playTimeout)
+        this.playTimeout = null
       }
-      this.player.playTimeout = setTimeout(() => {
+      this.playTimeout = setTimeout(() => {
         this.testVideoEmbedAutoplay(false)
       }, timeoutDuration)
     }
     if (success === true) {
-      clearTimeout(this.player.playTimeout)
+      clearTimeout(this.playTimeout)
       this.logger('test video autoplay: success')
-      this.player.playTimeout = null
+      this.playTimeout = null
       this.videoCanAutoPlay = true
       this.player.ready = true
       this.player.iframe.classList.add('ready')
@@ -254,9 +259,9 @@ class VideoBackground {
       return
     }
     if (success === false) {
-      clearTimeout(this.player.playTimeout)
+      clearTimeout(this.playTimeout)
       this.logger('test video autoplay: failure')
-      this.player.playTimeout = null
+      this.playTimeout = null
       this.videoCanAutoPlay = false
       this.renderFallbackBehavior()
       return

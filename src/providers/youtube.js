@@ -16,7 +16,7 @@ const initializeYouTubeAPI = (win) => {
     firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     tag.addEventListener('load', (evt) => {
       evt.currentTarget.classList.add('loaded');
-      resolve('created and loaded');
+      resolve('api script tag created and loaded');
     }, true);
     tag.addEventListener('error', (evt) => {
       reject('Failed to load YouTube script: ', evt);
