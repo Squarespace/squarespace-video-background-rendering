@@ -48,9 +48,13 @@ const VideoAutoplayTest = () => {
     }
 
     const elem = document.createElement('video');
+    elem.autoplay = true;
     elem.setAttribute('autoplay', true);
+    elem.muted = true;
     elem.setAttribute('muted', true);
+    elem.playsinline = true;
     elem.setAttribute('playsinline', true);
+    elem.volume = 0;
     elem.setAttribute('data-is-playing', 'false');
     elem.setAttribute('style', 'width: 1px; height: 1px; position: fixed; top: 0; left: 0; z-index: 100;');
     document.body.appendChild(elem);
@@ -95,7 +99,7 @@ const VideoAutoplayTest = () => {
     });
 
     elem.load();
-    elem.play();
+    elem.play().catch(err => {});
   });
 };
 
