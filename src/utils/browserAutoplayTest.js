@@ -61,18 +61,29 @@ const VideoAutoplayTest = () => {
 
     let failsafeTimer = null;
 
+    const cleanUp = () => {
+      if (failsafeTimer) {
+        clearTimeout(failsafeTimer)
+        failsafeTimer = null
+      }
+
+      try {
+        document.body.removeChild(elem)
+      } catch (err) { return }
+    }
+
     try {
       if (elem.canPlayType('video/ogg; codecs="theora"').match(/^(probably)|(maybe)/)) {
         elem.src = OggVideo;
       } else if (elem.canPlayType('video/mp4; codecs="avc1.42E01E"').match(/^(probably)|(maybe)/)) {
         elem.src = Mp4Video;
       } else {
-        elem.remove();
+        cleanUp();
         reject('no autoplay: element does not support mp4 or ogg format');
         return;
       }
     } catch (err) {
-      elem.remove();
+      cleanUp();
       reject('no autoplay: ' + err);
       return;
     }
@@ -80,20 +91,18 @@ const VideoAutoplayTest = () => {
     elem.addEventListener('play', () => {
       elem.setAttribute('data-is-playing', 'true');
       failsafeTimer = setTimeout(() => {
-        elem.remove();
+        cleanUp();
         reject('no autoplay: unsure');
       }, 3000);
     });
 
     elem.addEventListener('canplay', () => {
       if (elem.getAttribute('data-is-playing') === 'true') {
-        elem.remove();
-        clearTimeout(failsafeTimer);
+        cleanUp();
         resolve('autoplay supported');
         return true;
       }
-      elem.remove();
-      clearTimeout(failsafeTimer);
+      cleanUp();
       reject('no autoplay: browser does not support autoplay');
       return false;
     });
