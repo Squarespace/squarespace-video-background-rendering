@@ -163,7 +163,7 @@ const findPlayerAspectRatio = (container, player, videoSource) => {
 const getPlayerElement = (container) => {
   let playerElement = container.querySelector('#player');
   if (!playerElement) {
-    playerElement = document.createElement('div');
+    playerElement = container.ownerDocument.createElement('div');
     playerElement.id = 'player';
     container.appendChild(playerElement);
   }

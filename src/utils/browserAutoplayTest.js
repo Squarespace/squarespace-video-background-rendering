@@ -49,13 +49,28 @@ const VideoAutoplayTest = () => {
 
     const elem = document.createElement('video');
     elem.autoplay = true;
+    elem.setAttribute('autoplay', true);
     elem.muted = true;
+    elem.setAttribute('muted', true);
+    elem.playsinline = true;
+    elem.setAttribute('playsinline', true);
     elem.volume = 0;
     elem.setAttribute('data-is-playing', 'false');
-    elem.style.display = 'none';
+    elem.setAttribute('style', 'width: 1px; height: 1px; position: fixed; top: 0; left: 0; z-index: 100;');
     document.body.appendChild(elem);
 
     let failsafeTimer = null;
+
+    const cleanUp = () => {
+      if (failsafeTimer) {
+        clearTimeout(failsafeTimer)
+        failsafeTimer = null
+      }
+
+      try {
+        document.body.removeChild(elem)
+      } catch (err) { return }
+    }
 
     try {
       if (elem.canPlayType('video/ogg; codecs="theora"').match(/^(probably)|(maybe)/)) {
@@ -63,12 +78,12 @@ const VideoAutoplayTest = () => {
       } else if (elem.canPlayType('video/mp4; codecs="avc1.42E01E"').match(/^(probably)|(maybe)/)) {
         elem.src = Mp4Video;
       } else {
-        elem.remove();
+        cleanUp();
         reject('no autoplay: element does not support mp4 or ogg format');
         return;
       }
     } catch (err) {
-      elem.remove();
+      cleanUp();
       reject('no autoplay: ' + err);
       return;
     }
@@ -76,20 +91,18 @@ const VideoAutoplayTest = () => {
     elem.addEventListener('play', () => {
       elem.setAttribute('data-is-playing', 'true');
       failsafeTimer = setTimeout(() => {
-        elem.remove();
+        cleanUp();
         reject('no autoplay: unsure');
-      }, 10000);
+      }, 3000);
     });
 
     elem.addEventListener('canplay', () => {
       if (elem.getAttribute('data-is-playing') === 'true') {
-        elem.remove();
-        clearTimeout(failsafeTimer);
+        cleanUp();
         resolve('autoplay supported');
         return true;
       }
-      elem.remove();
-      clearTimeout(failsafeTimer);
+      cleanUp();
       reject('no autoplay: browser does not support autoplay');
       return false;
     });
