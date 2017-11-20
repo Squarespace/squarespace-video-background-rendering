@@ -54,6 +54,7 @@ const initializeVimeoPlayer = ({
       iframe: playerIframe,
       setPlaybackRate: () => {}
     }
+    resolve(player)
 
     const getVideoDetails = () => {
       postMessageManager('getDuration')
@@ -91,7 +92,6 @@ const initializeVimeoPlayer = ({
         clearTimeout(playerPromiseTimer)
         playerPromiseTimer = null
       }
-      resolve(player)
 
       if (!player.dimensions) {
         player.dimensions = {}

@@ -99,7 +99,7 @@ const VideoAutoplayTest = () => {
     });
 
     elem.load();
-    elem.play().catch(err => {});
+    elem.play();
   });
 };
 
