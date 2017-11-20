@@ -1,6 +1,6 @@
 const DEBUG = {
   enabled: true, // Adds the Class instance to the window for easier debugging
-  verbose: true // Allows logging in detail
+  verbose: false // Allows logging in detail
 }
 
 const DEFAULT_PROPERTY_VALUES = {
