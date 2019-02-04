@@ -34,6 +34,7 @@ class VideoBackground {
     this.events = []
     this.browserCanAutoPlay = false
     this.videoCanAutoPlay = false
+    this.autoPlayTest = null
 
     this.setInstanceProperties(props)
 
@@ -122,7 +123,7 @@ class VideoBackground {
       end: props.timeCode.end
     }
     this.player = {}
-    this.DEBUG = { enabled: true, verbose: true }
+    this.DEBUG = props.DEBUG
   }
 
   /**
@@ -203,11 +204,11 @@ class VideoBackground {
       stateChangeCallback: (state, data) => {
         switch (state) {
         case 'buffering':
-          this.testVideoEmbedAutoplay()
+          this.autoPlayTest.reset(timeoutDuration)
           break
         case 'playing':
           if (this.playTimeout !== null || !this.videoCanAutoPlay) {
-            this.testVideoEmbedAutoplay(true)
+            this.autoPlayTest.succeed()
           }
           break
         }
@@ -220,13 +221,14 @@ class VideoBackground {
       }
     })
 
-    this.testVideoEmbedAutoplay(undefined, timeoutDuration * 2)
+    this.autoPlayTest = this.testVideoEmbedAutoplay()
+    this.autoPlayTest.start(timeoutDuration * 2)
 
     playerPromise.then(player => {
       this.player = player
     }, reason => {
       this.logger(reason)
-      this.testVideoEmbedAutoplay(false)
+      this.autoPlayTest.fail()
     })
   }
 
@@ -235,23 +237,27 @@ class VideoBackground {
     * check for `autoplay` and `playsinline` attributes, set a timeout that will
     * tell this instance that the media cannot auto play. The timeout will be
     * cleared via the media's playback API if it does begin playing.
-    * @param {boolean} [success] Call the method initially without this param to begin
-    *   the test. Call again as `true` to clear the timeout and prevent mobile fallback behavior.
-    * @return {undefined}
+    * @return {Object} API - methods to start and reset the timer, and to manually trigger the success and fail state.
     */
-  testVideoEmbedAutoplay(success = undefined, time = timeoutDuration) {
-    if (success === undefined) {
+  testVideoEmbedAutoplay() {
+
+    const start = (time = timeoutDuration) => {
       this.logger('test video autoplay: begin')
+      this.playTimeout = setTimeout(() => {
+        this.autoPlayTest.fail()
+      }, time)
+    }
+
+    const reset = (time = timeoutDuration) => {
       if (this.playTimeout) {
-        this.logger('test video autoplay: reset, begin')
+        this.logger('test video autoplay: reset')
         clearTimeout(this.playTimeout)
         this.playTimeout = null
       }
-      this.playTimeout = setTimeout(() => {
-        this.testVideoEmbedAutoplay(false)
-      }, time)
+      start(time)
     }
-    if (success === true) {
+
+    const succeed = () => {
       clearTimeout(this.playTimeout)
       this.logger('test video autoplay: success')
       this.playTimeout = null
@@ -259,15 +265,21 @@ class VideoBackground {
       this.player.ready = true
       this.player.iframe.classList.add('ready')
       this.container.classList.remove('mobile')
-      return
     }
-    if (success === false) {
+
+    const fail = () => {
       clearTimeout(this.playTimeout)
       this.logger('test video autoplay: failure')
       this.playTimeout = null
       this.videoCanAutoPlay = false
       this.renderFallbackBehavior()
-      return
+    }
+
+    return {
+      start,
+      reset,
+      succeed,
+      fail,
     }
   }
 
@@ -276,7 +288,7 @@ class VideoBackground {
     * @return {undefined}
     */
   renderFallbackBehavior() {
-    if (this.player && this.player.destroy()) {
+    if (this.player && typeof this.player.destroy === 'function') {
       this.logger('destroying player')
       this.player.destroy()
     }
