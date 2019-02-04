@@ -111,7 +111,7 @@ class VideoBackground {
 
     this.videoSource = getVideoSource(props.url)
     this.videoId = getVideoID(props.url, this.videoSource)
-    this.customFallbackImage = validatedImage(props.customFallbackImage)
+    this.customFallbackImage = validatedImage(props.customFallbackImage || props.container.querySelector('img'))
     this.filter = props.filter
     this.filterStrength = props.filterStrength
     this.fitMode = props.fitMode
@@ -122,7 +122,7 @@ class VideoBackground {
       end: props.timeCode.end
     }
     this.player = {}
-    this.DEBUG = props.DEBUG
+    this.DEBUG = { enabled: true, verbose: true }
   }
 
   /**
@@ -220,7 +220,9 @@ class VideoBackground {
       }
     })
 
-    playerPromise.then((player) => {
+    this.testVideoEmbedAutoplay(undefined, timeoutDuration * 2)
+
+    playerPromise.then(player => {
       this.player = player
     }, reason => {
       this.logger(reason)
@@ -237,16 +239,17 @@ class VideoBackground {
     *   the test. Call again as `true` to clear the timeout and prevent mobile fallback behavior.
     * @return {undefined}
     */
-  testVideoEmbedAutoplay(success = undefined) {
+  testVideoEmbedAutoplay(success = undefined, time = timeoutDuration) {
     if (success === undefined) {
       this.logger('test video autoplay: begin')
       if (this.playTimeout) {
+        this.logger('test video autoplay: reset, begin')
         clearTimeout(this.playTimeout)
         this.playTimeout = null
       }
       this.playTimeout = setTimeout(() => {
         this.testVideoEmbedAutoplay(false)
-      }, timeoutDuration)
+      }, time)
     }
     if (success === true) {
       clearTimeout(this.playTimeout)
@@ -273,6 +276,10 @@ class VideoBackground {
     * @return {undefined}
     */
   renderFallbackBehavior() {
+    if (this.player && this.player.destroy()) {
+      this.logger('destroying player')
+      this.player.destroy()
+    }
     this.setFallbackImage()
     this.container.classList.add('mobile')
     this.logger('added mobile')
