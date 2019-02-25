@@ -204,10 +204,12 @@ class VideoBackground {
       stateChangeCallback: (state, data) => {
         switch (state) {
         case 'buffering':
+          // The video embed loaded. Reset the timer to await auto play.
           this.autoPlayTest.reset(timeoutDuration)
           break
         case 'playing':
           if (this.playTimeout !== null || !this.videoCanAutoPlay) {
+            // The video element begain to auto play.
             this.autoPlayTest.succeed()
           }
           break
@@ -222,12 +224,15 @@ class VideoBackground {
     })
 
     this.autoPlayTest = this.testVideoEmbedAutoplay()
+    // Set a timer to await the initialization of the embedded player.
     this.autoPlayTest.start(timeoutDuration * 2)
 
     playerPromise.then(player => {
       this.player = player
     }, reason => {
       this.logger(reason)
+      // Either the video embed failed to load for any reason (e.g. network latency, deleted video, etc.),
+      // or the video element in the embed was not configured to properly auto play.
       this.autoPlayTest.fail()
     })
   }
