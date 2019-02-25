@@ -34,6 +34,7 @@ class VideoBackground {
     this.events = []
     this.browserCanAutoPlay = false
     this.videoCanAutoPlay = false
+    this.autoPlayTest = null
 
     this.setInstanceProperties(props)
 
@@ -111,7 +112,7 @@ class VideoBackground {
 
     this.videoSource = getVideoSource(props.url)
     this.videoId = getVideoID(props.url, this.videoSource)
-    this.customFallbackImage = validatedImage(props.customFallbackImage)
+    this.customFallbackImage = validatedImage(props.customFallbackImage || props.container.querySelector('img'))
     this.filter = props.filter
     this.filterStrength = props.filterStrength
     this.fitMode = props.fitMode
@@ -203,11 +204,13 @@ class VideoBackground {
       stateChangeCallback: (state, data) => {
         switch (state) {
         case 'buffering':
-          this.testVideoEmbedAutoplay()
+          // The video embed loaded. Reset the timer to await auto play.
+          this.autoPlayTest.reset(timeoutDuration)
           break
         case 'playing':
           if (this.playTimeout !== null || !this.videoCanAutoPlay) {
-            this.testVideoEmbedAutoplay(true)
+            // The video element begain to auto play.
+            this.autoPlayTest.succeed()
           }
           break
         }
@@ -220,11 +223,17 @@ class VideoBackground {
       }
     })
 
-    playerPromise.then((player) => {
+    this.autoPlayTest = this.testVideoEmbedAutoplay()
+    // Set a timer to await the initialization of the embedded player.
+    this.autoPlayTest.start(timeoutDuration * 2)
+
+    playerPromise.then(player => {
       this.player = player
     }, reason => {
       this.logger(reason)
-      this.testVideoEmbedAutoplay(false)
+      // Either the video embed failed to load for any reason (e.g. network latency, deleted video, etc.),
+      // or the video element in the embed was not configured to properly auto play.
+      this.autoPlayTest.fail()
     })
   }
 
@@ -233,22 +242,27 @@ class VideoBackground {
     * check for `autoplay` and `playsinline` attributes, set a timeout that will
     * tell this instance that the media cannot auto play. The timeout will be
     * cleared via the media's playback API if it does begin playing.
-    * @param {boolean} [success] Call the method initially without this param to begin
-    *   the test. Call again as `true` to clear the timeout and prevent mobile fallback behavior.
-    * @return {undefined}
+    * @return {Object} API - methods to start and reset the timer, and to manually trigger the success and fail state.
     */
-  testVideoEmbedAutoplay(success = undefined) {
-    if (success === undefined) {
+  testVideoEmbedAutoplay() {
+
+    const start = (time = timeoutDuration) => {
       this.logger('test video autoplay: begin')
+      this.playTimeout = setTimeout(() => {
+        this.autoPlayTest.fail()
+      }, time)
+    }
+
+    const reset = (time = timeoutDuration) => {
       if (this.playTimeout) {
+        this.logger('test video autoplay: reset')
         clearTimeout(this.playTimeout)
         this.playTimeout = null
       }
-      this.playTimeout = setTimeout(() => {
-        this.testVideoEmbedAutoplay(false)
-      }, timeoutDuration)
+      start(time)
     }
-    if (success === true) {
+
+    const succeed = () => {
       clearTimeout(this.playTimeout)
       this.logger('test video autoplay: success')
       this.playTimeout = null
@@ -256,15 +270,21 @@ class VideoBackground {
       this.player.ready = true
       this.player.iframe.classList.add('ready')
       this.container.classList.remove('mobile')
-      return
     }
-    if (success === false) {
+
+    const fail = () => {
       clearTimeout(this.playTimeout)
       this.logger('test video autoplay: failure')
       this.playTimeout = null
       this.videoCanAutoPlay = false
       this.renderFallbackBehavior()
-      return
+    }
+
+    return {
+      start,
+      reset,
+      succeed,
+      fail,
     }
   }
 
@@ -273,6 +293,10 @@ class VideoBackground {
     * @return {undefined}
     */
   renderFallbackBehavior() {
+    if (this.player && typeof this.player.destroy === 'function') {
+      this.logger('destroying player')
+      this.player.destroy()
+    }
     this.setFallbackImage()
     this.container.classList.add('mobile')
     this.logger('added mobile')
