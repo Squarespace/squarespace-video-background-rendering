@@ -111,7 +111,7 @@ class VideoBackground {
 
     this.videoSource = getVideoSource(props.url)
     this.videoId = getVideoID(props.url, this.videoSource)
-    this.customFallbackImage = validatedImage(props.customFallbackImage)
+    this.customFallbackImage = validatedImage(props.customFallbackImage || props.container.querySelector('img'))
     this.filter = props.filter
     this.filterStrength = props.filterStrength
     this.fitMode = props.fitMode
