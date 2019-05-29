@@ -65,7 +65,10 @@ class VideoBackground {
     this.events = null
 
     if (this.player && typeof this.player.destroy === 'function') {
-      this.player.iframe.classList.remove('ready')
+      // iframe might already have been removed from DOM
+      if (this.player.iframe) {
+        this.player.iframe.classList.remove('ready')
+      }
       clearTimeout(this.playTimeout)
       this.playTimeout = null
       this.player.destroy()
