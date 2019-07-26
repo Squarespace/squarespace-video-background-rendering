@@ -114,7 +114,8 @@ const getVideoSource = (url = DEFAULT_PROPERTY_VALUES.url) => {
  * @return {String} Video ID
  */
 const getVideoID = (url = DEFAULT_PROPERTY_VALUES.url, source = null) => {
-  let match = url.match(providerUtils[source].idRegex)
+  const provider = providerUtils[source];
+  let match = provider && url.match(provider.idRegex)
   if (match && match[2].length) {
     return match[2]
   }
