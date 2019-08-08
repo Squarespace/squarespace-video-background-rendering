@@ -100,7 +100,7 @@ const getVideoSource = (url = DEFAULT_PROPERTY_VALUES.url) => {
   }
 
   match = url.match(VIMEO_REGEX)
-  if (match && match[2].length) {
+  if (match && match[3].length) {
     return 'vimeo'
   }
 
@@ -116,8 +116,9 @@ const getVideoSource = (url = DEFAULT_PROPERTY_VALUES.url) => {
 const getVideoID = (url = DEFAULT_PROPERTY_VALUES.url, source = null) => {
   const provider = providerUtils[source];
   let match = provider && url.match(provider.idRegex)
-  if (match && match[2].length) {
-    return match[2]
+  const id = source === 'vimeo' ? match[3] : match[2]
+  if (match && id.length) {
+    return id
   }
 
   console.error(`Video id at ${ url } is not valid`)

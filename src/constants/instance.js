@@ -21,7 +21,7 @@ const TIMEOUT = 2500
 // eslint-disable-next-line no-useless-escape
 const YOUTUBE_REGEX = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]{11}).*/
 // eslint-disable-next-line no-useless-escape
-const VIMEO_REGEX = /^.*(vimeo\.com\/)([0-9]{7,}(#t\=.*s)?)/
+const VIMEO_REGEX = /^.*(vimeo\.com\/)(channels\/[a-zA-Z0-9]*\/)?([0-9]{7,}(#t\=.*s)?)/
 
 export {
   DEBUG,
