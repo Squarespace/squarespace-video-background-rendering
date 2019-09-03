@@ -128,6 +128,10 @@ class VideoBackground {
     this.DEBUG = props.DEBUG
   }
 
+  onFallbackImageLoaded() {
+    this.customFallbackImage.classList.add('loaded');
+  }
+
   /**
    * @method setFallbackImage Loads a custom fallback image if the player cannot autoplay.
    * @return {undefined}
@@ -137,8 +141,12 @@ class VideoBackground {
     if (!customFallbackImage) {
       return
     }
+    if (customFallbackImage.complete) {
+      this.onFallbackImageLoaded()
+      return
+    }
     customFallbackImage.addEventListener('load', () => {
-      customFallbackImage.classList.add('loaded')
+      this.onFallbackImageLoaded()
     }, { once: true })
     if (this.windowContext.ImageLoader) {
       this.windowContext.ImageLoader.load(customFallbackImage, { load: true })
