@@ -5,7 +5,6 @@ import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtu
 import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'
 import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
-import { TIMEOUT as timeoutDuration } from './constants/instance'
 import { findPlayerAspectRatio, getStartTime, getVideoID, getVideoSource, validatedImage } from './utils/utils'
 
 const videoSourceModules = {
@@ -34,9 +33,9 @@ class VideoBackground {
     this.events = []
     this.browserCanAutoPlay = false
     this.videoCanAutoPlay = false
-    this.autoPlayTest = null
 
     this.setInstanceProperties(props)
+    this.renderFallbackBehavior()
 
     // Test browser support for autoplay for video elements
     testBrowserAutoplaySupport().then((value) => {
@@ -47,7 +46,6 @@ class VideoBackground {
       // If there is no browser support, go to fall back behavior
       this.logger(reason)
       this.browserCanAutoPlay = false
-      this.renderFallbackBehavior()
     }).then(() => {
       this.setDisplayEffects()
       this.bindUI()
@@ -69,8 +67,6 @@ class VideoBackground {
       if (this.player.iframe) {
         this.player.iframe.classList.remove('ready')
       }
-      clearTimeout(this.playTimeout)
-      this.playTimeout = null
       this.player.destroy()
       this.player = {}
     }
@@ -129,17 +125,25 @@ class VideoBackground {
     this.DEBUG = props.DEBUG
   }
 
+  onFallbackImageLoaded() {
+    this.customFallbackImage.classList.add('loaded');
+  }
+
   /**
    * @method setFallbackImage Loads a custom fallback image if the player cannot autoplay.
    * @return {undefined}
    */
   setFallbackImage() {
     const customFallbackImage = this.customFallbackImage
-    if (!customFallbackImage || (this.browserCanAutoPlay && this.videoCanAutoPlay)) {
+    if (!customFallbackImage) {
+      return
+    }
+    if (customFallbackImage.hasAttribute('src') && customFallbackImage.complete) {
+      this.onFallbackImageLoaded()
       return
     }
     customFallbackImage.addEventListener('load', () => {
-      customFallbackImage.classList.add('loaded')
+      this.onFallbackImageLoaded()
     }, { once: true })
     if (this.windowContext.ImageLoader) {
       this.windowContext.ImageLoader.load(customFallbackImage, { load: true })
@@ -165,12 +169,10 @@ class VideoBackground {
         this.player.ready = false
         this.initializeVideoPlayer()
       }).catch((message) => {
-        this.renderFallbackBehavior()
         document.body.classList.add('ready')
         this.logger(message)
       })
     } else {
-      this.renderFallbackBehavior()
       document.body.classList.add('ready')
     }
   }
@@ -197,7 +199,7 @@ class VideoBackground {
       videoId: this.videoId,
       startTime: this.timeCode.start,
       speed: this.playbackSpeed,
-      readyCallback: (player, data) => {
+      readyCallback: () => {
         this.player.iframe.classList.add('background-video')
         this.videoAspectRatio = findPlayerAspectRatio(this.container, this.player, this.videoSource)
         this.syncPlayer()
@@ -206,14 +208,14 @@ class VideoBackground {
       },
       stateChangeCallback: (state, data) => {
         switch (state) {
-        case 'buffering':
-          // The video embed loaded. Reset the timer to await auto play.
-          this.autoPlayTest.reset(timeoutDuration)
-          break
         case 'playing':
-          if (this.playTimeout !== null || !this.videoCanAutoPlay) {
+          if (!this.videoCanAutoPlay) {
             // The video element begain to auto play.
-            this.autoPlayTest.succeed()
+            this.logger('video started playing')
+            this.videoCanAutoPlay = true
+            this.player.ready = true
+            this.player.iframe.classList.add('ready')
+            this.container.classList.remove('mobile')
           }
           break
         }
@@ -226,69 +228,13 @@ class VideoBackground {
       }
     })
 
-    this.autoPlayTest = this.testVideoEmbedAutoplay()
-    // Set a timer to await the initialization of the embedded player.
-    this.autoPlayTest.start(timeoutDuration * 2)
-
     playerPromise.then(player => {
       this.player = player
     }, reason => {
-      this.logger(reason)
       // Either the video embed failed to load for any reason (e.g. network latency, deleted video, etc.),
       // or the video element in the embed was not configured to properly auto play.
-      this.autoPlayTest.fail()
+      this.logger(reason)
     })
-  }
-
-  /**
-    * @method testVideoEmbedAutoplay Since we cannot inspect the video element inside the provider's IFRAME to
-    * check for `autoplay` and `playsinline` attributes, set a timeout that will
-    * tell this instance that the media cannot auto play. The timeout will be
-    * cleared via the media's playback API if it does begin playing.
-    * @return {Object} API - methods to start and reset the timer, and to manually trigger the success and fail state.
-    */
-  testVideoEmbedAutoplay() {
-
-    const start = (time = timeoutDuration) => {
-      this.logger('test video autoplay: begin')
-      this.playTimeout = setTimeout(() => {
-        this.autoPlayTest.fail()
-      }, time)
-    }
-
-    const reset = (time = timeoutDuration) => {
-      if (this.playTimeout) {
-        this.logger('test video autoplay: reset')
-        clearTimeout(this.playTimeout)
-        this.playTimeout = null
-      }
-      start(time)
-    }
-
-    const succeed = () => {
-      clearTimeout(this.playTimeout)
-      this.logger('test video autoplay: success')
-      this.playTimeout = null
-      this.videoCanAutoPlay = true
-      this.player.ready = true
-      this.player.iframe.classList.add('ready')
-      this.container.classList.remove('mobile')
-    }
-
-    const fail = () => {
-      clearTimeout(this.playTimeout)
-      this.logger('test video autoplay: failure')
-      this.playTimeout = null
-      this.videoCanAutoPlay = false
-      this.renderFallbackBehavior()
-    }
-
-    return {
-      start,
-      reset,
-      succeed,
-      fail,
-    }
   }
 
   /**
@@ -296,10 +242,6 @@ class VideoBackground {
     * @return {undefined}
     */
   renderFallbackBehavior() {
-    if (this.player && typeof this.player.destroy === 'function') {
-      this.logger('destroying player')
-      this.player.destroy()
-    }
     this.setFallbackImage()
     this.container.classList.add('mobile')
     this.logger('added mobile')
@@ -320,7 +262,7 @@ class VideoBackground {
    * may be a completely different size and ratio. Scale up the IFRAME so the inner video
    * behaves in the proper `fitMode`, with optional additional scaling to zoom in. Also allow
    * ImageLoader to reload the custom fallback image, if appropriate.
-   * @param {Number} [scaleValue] A multipiler used to increase the scaled size of the media.
+   * @param {Number} [scaleValue] A multiplier used to increase the scaled size of the media.
    * @return {undefined}
    */
   scaleVideo(scaleValue) {
