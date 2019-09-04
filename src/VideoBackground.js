@@ -238,27 +238,6 @@ class VideoBackground {
   }
 
   /**
-    * @method testVideoEmbedAutoplay Since we cannot inspect the video element inside the provider's IFRAME to
-    * check for `autoplay` and `playsinline` attributes, set a timeout that will
-    * tell this instance that the media cannot auto play. The timeout will be
-    * cleared via the media's playback API if it does begin playing.
-    * @return {Object} API - methods to start and reset the timer, and to manually trigger the success and fail state.
-    */
-  testVideoEmbedAutoplay() {
-
-    const start = () => {
-    }
-
-    const succeed = () => {
-    }
-
-    return {
-      start,
-      succeed,
-    }
-  }
-
-  /**
     * @method renderFallbackBehavior Initialize mobile fallback behavior
     * @return {undefined}
     */
