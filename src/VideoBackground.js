@@ -33,7 +33,6 @@ class VideoBackground {
     this.events = []
     this.browserCanAutoPlay = false
     this.videoCanAutoPlay = false
-    this.autoPlayTest = null
 
     this.setInstanceProperties(props)
     this.renderFallbackBehavior()
@@ -68,8 +67,6 @@ class VideoBackground {
       if (this.player.iframe) {
         this.player.iframe.classList.remove('ready')
       }
-      clearTimeout(this.playTimeout)
-      this.playTimeout = null
       this.player.destroy()
       this.player = {}
     }
@@ -141,7 +138,7 @@ class VideoBackground {
     if (!customFallbackImage) {
       return
     }
-    if (customFallbackImage.complete) {
+    if (customFallbackImage.hasAttribute('src') && customFallbackImage.complete) {
       this.onFallbackImageLoaded()
       return
     }
@@ -202,7 +199,7 @@ class VideoBackground {
       videoId: this.videoId,
       startTime: this.timeCode.start,
       speed: this.playbackSpeed,
-      readyCallback: (player, data) => {
+      readyCallback: () => {
         this.player.iframe.classList.add('background-video')
         this.videoAspectRatio = findPlayerAspectRatio(this.container, this.player, this.videoSource)
         this.syncPlayer()
@@ -212,9 +209,13 @@ class VideoBackground {
       stateChangeCallback: (state, data) => {
         switch (state) {
         case 'playing':
-          if (this.playTimeout !== null || !this.videoCanAutoPlay) {
+          if (!this.videoCanAutoPlay) {
             // The video element begain to auto play.
-            this.autoPlayTest.succeed()
+            this.logger('video started playing')
+            this.videoCanAutoPlay = true
+            this.player.ready = true
+            this.player.iframe.classList.add('ready')
+            this.container.classList.remove('mobile')
           }
           break
         }
@@ -226,10 +227,6 @@ class VideoBackground {
         }
       }
     })
-
-    this.autoPlayTest = this.testVideoEmbedAutoplay()
-    // Set a timer to await the initialization of the embedded player.
-    this.autoPlayTest.start()
 
     playerPromise.then(player => {
       this.player = player
@@ -250,15 +247,9 @@ class VideoBackground {
   testVideoEmbedAutoplay() {
 
     const start = () => {
-      this.logger('test video autoplay: begin')
     }
 
     const succeed = () => {
-      this.logger('test video autoplay: success')
-      this.videoCanAutoPlay = true
-      this.player.ready = true
-      this.player.iframe.classList.add('ready')
-      this.container.classList.remove('mobile')
     }
 
     return {
