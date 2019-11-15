@@ -60,7 +60,7 @@ class VideoBackground {
     if (this.events) {
       this.events.forEach(evt => evt.target.removeEventListener(evt.type, evt.handler, true))
     }
-    this.events = null
+    this.events.length = 0
 
     if (this.player && typeof this.player.destroy === 'function') {
       // iframe might already have been removed from DOM
@@ -126,7 +126,7 @@ class VideoBackground {
   }
 
   onFallbackImageLoaded() {
-    this.customFallbackImage.classList.add('loaded');
+    this.customFallbackImage.classList.add('loaded')
   }
 
   /**
