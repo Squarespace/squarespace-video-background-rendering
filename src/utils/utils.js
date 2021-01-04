@@ -1,4 +1,4 @@
-import { DEFAULT_PROPERTY_VALUES, YOUTUBE_REGEX, VIMEO_REGEX } from '../constants/instance.js'
+import { DEFAULT_PROPERTY_VALUES, UNSUPPORTED_VIDEO_SOURCE, YOUTUBE_REGEX, VIMEO_REGEX } from '../constants/instance.js'
 import parseUrl from 'url-parse'
 import get from 'lodash.get'
 
@@ -105,6 +105,7 @@ const getVideoSource = (url = DEFAULT_PROPERTY_VALUES.url) => {
   }
 
   console.error(`Video source ${ url } does not match supported types`)
+  return UNSUPPORTED_VIDEO_SOURCE
 }
 
 /**

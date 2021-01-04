@@ -18,6 +18,8 @@ const DEFAULT_PROPERTY_VALUES = {
 
 const TIMEOUT = 2500
 
+const UNSUPPORTED_VIDEO_SOURCE = 'unsupported'
+
 // eslint-disable-next-line no-useless-escape
 const YOUTUBE_REGEX = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]{11}).*/
 // eslint-disable-next-line no-useless-escape
@@ -28,5 +30,6 @@ export {
   DEFAULT_PROPERTY_VALUES,
   TIMEOUT,
   YOUTUBE_REGEX,
+  UNSUPPORTED_VIDEO_SOURCE,
   VIMEO_REGEX
 }
