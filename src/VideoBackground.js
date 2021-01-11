@@ -2,7 +2,7 @@ import merge from 'lodash.merge'
 import testBrowserAutoplaySupport from './utils/browserAutoplayTest'
 import { initializeVimeoAPI, initializeVimeoPlayer } from './providers/vimeo'
 import { initializeYouTubeAPI, initializeYouTubePlayer } from './providers/youtube'
-import { DEFAULT_PROPERTY_VALUES } from './constants/instance'
+import { DEFAULT_PROPERTY_VALUES, UNSUPPORTED_VIDEO_SOURCE } from './constants/instance'
 import { filterOptions as FILTER_OPTIONS } from './constants/filter'
 import { filterProperties as FILTER_PROPERTIES } from './constants/filter'
 import { findPlayerAspectRatio, getStartTime, getVideoID, getVideoSource, validatedImage } from './utils/utils'
@@ -34,7 +34,10 @@ class VideoBackground {
     this.browserCanAutoPlay = false
     this.videoCanAutoPlay = false
 
-    this.setInstanceProperties(props)
+    const arePropertiesSet = this.setInstanceProperties(props)
+    if (!arePropertiesSet) {
+      return
+    }
     this.renderFallbackBehavior()
 
     // Test browser support for autoplay for video elements
@@ -94,7 +97,7 @@ class VideoBackground {
   /**
    * @method setInstanceProperties Merge configuration properties with defaults with some minimal validation.
    * @param {Object} [props] Configuration options
-   * @return {undefined}
+   * @return {Boolean} have the properties been properly updated
    */
   setInstanceProperties(props = {}) {
     props = merge({}, DEFAULT_PROPERTY_VALUES, props)
@@ -110,7 +113,13 @@ class VideoBackground {
     }
 
     this.videoSource = getVideoSource(props.url)
+    if (this.videoSource === UNSUPPORTED_VIDEO_SOURCE) {
+      return false
+    }
     this.videoId = getVideoID(props.url, this.videoSource)
+    if (typeof this.videoId !== 'string') {
+      return false
+    }
     this.customFallbackImage = validatedImage(props.customFallbackImage || props.container.querySelector('img'))
     this.filter = props.filter
     this.filterStrength = props.filterStrength
@@ -123,6 +132,7 @@ class VideoBackground {
     }
     this.player = {}
     this.DEBUG = props.DEBUG
+    return true
   }
 
   onFallbackImageLoaded() {
