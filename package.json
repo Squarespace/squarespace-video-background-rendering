@@ -27,7 +27,6 @@
   "devDependencies": {
     "@babel/cli": "^7.12.13",
     "@babel/core": "^7.12.13",
-    "@babel/eslint-parser": "^7.12.13",
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
     "@babel/plugin-transform-runtime": "^7.12.15",
     "@babel/preset-env": "^7.12.13",
@@ -36,7 +35,7 @@
     "babel-plugin-add-module-exports": "^1.0.4",
     "chai": "^4.3.0",
     "eslint": "^7.19.0",
-    "eslint-config-squarespace": "^1.0.0",
+    "eslint-config-squarespace": "^2.0.0",
     "mocha": "^8.2.1",
     "webpack": "^3.8.1"
   },
