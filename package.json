@@ -21,7 +21,7 @@
     "@squarespace/polyfills": "1.0.0",
     "lodash.get": "^4.4.2",
     "lodash.merge": "^4.6.2",
-    "url-parse": "^1.4.7",
+    "url-parse": "^1.5.1",
     "xhr": "^2.6.0"
   },
   "devDependencies": {
