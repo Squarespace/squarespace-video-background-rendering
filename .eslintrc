@@ -1,15 +1,11 @@
 {
-  "extends": "eslint-config-squarespace/vanilla",
-  "parser": "babel-eslint",
+  "extends": "eslint-config-squarespace",
   "env": {
-    "browser": true,
-    "node": true,
-    "es6": true,
     "mocha": true
   },
   "rules": {
     "semi": "off",
-    "complexity": ["warn", { "max": 12 }]
+    "complexity": ["warn", { "max": 13 }]
   },
   "parserOptions": {
     "sourceType": "module"

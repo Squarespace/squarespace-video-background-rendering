@@ -160,7 +160,7 @@ class VideoBackground {
       return
     }
     // Forcing a load event on the image when ImageLoader is not present
-    customFallbackImage.src = customFallbackImage.src
+    customFallbackImage.src = customFallbackImage.src // eslint-disable-line no-self-assign
   }
 
   /**
